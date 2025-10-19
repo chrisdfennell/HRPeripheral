@@ -18,11 +18,14 @@
   <uses-permission android:name="android.permission.BLUETOOTH_SCAN"
       android:usesPermissionFlags="neverForLocation" />
   <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
-
-  <!-- For later when we *broadcast* HR (peripheral mode) -->
   <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" />
+  
+  <!-- Service and sensor permissions -->
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE_HEALTH" />
+  <uses-permission android:name="android.permission.BODY_SENSORS" />
 
-  <!-- You already had this -->
+
   <uses-permission android:name="android.permission.WAKE_LOCK" />
 
   <application
@@ -33,12 +36,11 @@
       android:supportsRtl="true"
       android:theme="@android:style/Theme.DeviceDefault">
 
-    <!-- Wearable library (as you had it) -->
     <uses-library android:name="com.google.android.wearable" android:required="true" />
 
-    <!-- NOTE:
-         Your MainActivity is provided via the [Activity(MainLauncher=true)] attribute in C#,
-         so we do NOT declare it here. The manifest merger will add it with the right
-         intent-filter. -->
+    <service android:name=".HeartRateService"
+             android:foregroundServiceType="health|connectedDevice"
+             android:exported="false" />
+
   </application>
 </manifest>

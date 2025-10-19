@@ -1,10 +1,8 @@
 using Android.App;
+using Android.Content;
+using Android.Content.PM;
 using Android.OS;
 using Android.Widget;
-using Android.Content.PM;
-using Android.Util;
-using System.Timers;
-using Timer = System.Timers.Timer;
 
 namespace HRPeripheral;
 
@@ -16,16 +14,8 @@ namespace HRPeripheral;
 )]
 public class MainActivity : Activity
 {
-    const string TAG = "HRPeripheral";
-
-    // Peripheral (advertises HR service)
-    private BlePeripheral? _peripheral;
-
-    // Simple heartbeat generator to prove it works with the bike
-    private Timer? _tick;
-    private byte _bpm = 75; // start value
-
     private TextView? _hrText;
+    private BroadcastReceiver? _updateReceiver;
 
     protected override void OnCreate(Bundle? savedInstanceState)
     {
@@ -40,82 +30,77 @@ public class MainActivity : Activity
         }
         else
         {
-            InitPeripheral();
+            StartHrService();
         }
     }
 
     public override void OnRequestPermissionsResult(int requestCode, string[] permissions, Permission[] grantResults)
     {
         base.OnRequestPermissionsResult(requestCode, permissions, grantResults);
+
         if (requestCode == BlePermissions.RequestCode && BlePermissions.HasAll(this))
-            InitPeripheral();
+        {
+            StartHrService();
+        }
         else
-            Toast.MakeText(this, "Bluetooth permissions required.", ToastLength.Long).Show();
+        {
+            Toast.MakeText(this, "Permissions required to function.", ToastLength.Long).Show();
+        }
     }
 
-    void InitPeripheral()
+    private void StartHrService()
     {
-        if (_peripheral != null) return;
-        _peripheral = new BlePeripheral(this);
+        var intent = new Intent(this, typeof(HeartRateService));
+        if (Build.VERSION.SdkInt >= BuildVersionCodes.O)
+            StartForegroundService(intent);
+        else
+            StartService(intent);
     }
 
     protected override void OnResume()
     {
         base.OnResume();
 
-        try
-        {
-            if (!BlePermissions.HasAll(this))
-            {
-                Toast.MakeText(this, "Grant Bluetooth permissions.", ToastLength.Short).Show();
-                return;
-            }
+        // Prepare receiver for service updates
+        _updateReceiver ??= new HrUpdateReceiver(_hrText);
 
-            // Start advertising/GATT
-            var ok = _peripheral?.StartAsync() ?? false;
-            if (!ok)
-            {
-                Toast.MakeText(this, "BLE advertising not supported or Bluetooth off.", ToastLength.Long).Show();
-                return;
-            }
+        var filter = new IntentFilter(HeartRateService.ACTION_UPDATE);
 
-            Toast.MakeText(this, "Advertising Heart Rate Service…", ToastLength.Short).Show();
-
-            // Kick off a 1 Hz “fake HR” so the bike can read something immediately
-            _tick = new Timer(1000);
-            _tick.Elapsed += (_, __) =>
-            {
-                // bounce BPM 75..145 to make it obvious
-                _bpm = (byte)(_bpm >= 145 ? 75 : _bpm + 1);
-
-                try { _peripheral?.NotifyHeartRate(_bpm); } catch { /* ignore */ }
-
-                RunOnUiThread(() =>
-                {
-                    try { _hrText?.SetText($"{_bpm} bpm", TextView.BufferType.Normal); } catch { }
-                });
-            };
-            _tick.AutoReset = true;
-            _tick.Start();
-        }
-        catch (System.Exception ex)
-        {
-            Log.Error(TAG, "OnResume error: " + ex);
-            Toast.MakeText(this, "Error: " + ex.Message, ToastLength.Long).Show();
-        }
+        // Android 13+ requires specifying exported/not-exported for dynamic receivers
+        if (Build.VERSION.SdkInt >= BuildVersionCodes.Tiramisu)
+            RegisterReceiver(_updateReceiver, filter, ReceiverFlags.NotExported);
+        else
+            RegisterReceiver(_updateReceiver, filter);
     }
 
     protected override void OnPause()
     {
-        try { _tick?.Stop(); _tick?.Dispose(); _tick = null; } catch { }
-        try { _peripheral?.Stop(); } catch { }
+        // Always unregister to avoid leaks/crashes on resume
+        if (_updateReceiver != null)
+        {
+            try { UnregisterReceiver(_updateReceiver); }
+            catch { /* ignore if not registered */ }
+        }
         base.OnPause();
     }
 
-    protected override void OnDestroy()
+    /// <summary>
+    /// Receives heart-rate updates from HeartRateService and updates the UI.
+    /// </summary>
+    private class HrUpdateReceiver : BroadcastReceiver
     {
-        try { _tick?.Stop(); _tick?.Dispose(); _tick = null; } catch { }
-        try { _peripheral?.Stop(); } catch { }
-        base.OnDestroy();
+        private readonly TextView? _targetView;
+
+        public HrUpdateReceiver(TextView? targetView) => _targetView = targetView;
+
+        public override void OnReceive(Context? context, Intent? intent)
+        {
+            if (intent?.Action == HeartRateService.ACTION_UPDATE)
+            {
+                int hr = intent.GetIntExtra("hr", 0);
+                if (_targetView != null)
+                    _targetView.Text = $"{hr} bpm";
+            }
+        }
     }
 }
