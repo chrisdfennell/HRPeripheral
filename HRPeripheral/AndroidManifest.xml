@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.fennell.hrperipheral"
+    android:versionCode="1"
+    android:versionName="1.0">
+
+  <!-- Device type + BLE capability -->
+  <uses-feature android:name="android.hardware.type.watch" />
+  <uses-feature android:name="android.hardware.bluetooth_le" android:required="true" />
+
+  <!-- Permissions -->
+  <!-- Pre-Android 12 fallback (location is needed to scan BLE on < S) -->
+  <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
+  <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />
+  <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" android:maxSdkVersion="30" />
+
+  <!-- Android 12+ runtime Bluetooth permissions -->
+  <uses-permission android:name="android.permission.BLUETOOTH_SCAN"
+      android:usesPermissionFlags="neverForLocation" />
+  <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+
+  <!-- For later when we *broadcast* HR (peripheral mode) -->
+  <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" />
+
+  <!-- You already had this -->
+  <uses-permission android:name="android.permission.WAKE_LOCK" />
+
+  <application
+      android:allowBackup="true"
+      android:icon="@mipmap/appicon"
+      android:roundIcon="@mipmap/appicon_round"
+      android:label="@string/app_name"
+      android:supportsRtl="true"
+      android:theme="@android:style/Theme.DeviceDefault">
+
+    <!-- Wearable library (as you had it) -->
+    <uses-library android:name="com.google.android.wearable" android:required="true" />
+
+    <!-- NOTE:
+         Your MainActivity is provided via the [Activity(MainLauncher=true)] attribute in C#,
+         so we do NOT declare it here. The manifest merger will add it with the right
+         intent-filter. -->
+  </application>
+</manifest>

@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.Android.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net9.0-android</TargetFramework>
+
+    <!-- Watch CPU (you confirmed armeabi-v7a) -->
+    <RuntimeIdentifiers>android-arm</RuntimeIdentifiers>
+
+    <SupportedOSPlatformVersion>23</SupportedOSPlatformVersion>
+    <OutputType>Exe</OutputType>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+
+    <ApplicationId>com.fennell.hrperipheral</ApplicationId>
+    <ApplicationDisplayVersion>1.0.0</ApplicationDisplayVersion>
+    <ApplicationVersion>1</ApplicationVersion>
+
+    <TrimMode>partial</TrimMode>
+    <AndroidUseLatestPlatformSdk>true</AndroidUseLatestPlatformSdk>
+    <AndroidPackageFormat>apk</AndroidPackageFormat>
+    <AndroidUseDebugKeystore>true</AndroidUseDebugKeystore>
+    <AndroidSignPackage>true</AndroidSignPackage>
+
+    <!-- Silence density warning -->
+    <MSBuildWarningsAsMessages>$(MSBuildWarningsAsMessages);XA4218</MSBuildWarningsAsMessages>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- AndroidX bits used by BlePermissions / Activity Result API -->
+    <!-- <PackageReference Include="Xamarin.AndroidX.Core" Version="1.13.1.4" /> -->
+    <PackageReference Include="Xamarin.AndroidX.Activity" Version="1.9.3.1" />
+    <!-- If you use Wear UI widgets: -->
+    <!-- <PackageReference Include="Xamarin.AndroidX.Wear" Version="1.3.0.10" /> -->
+  </ItemGroup>
+</Project>
