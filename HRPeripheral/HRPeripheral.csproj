@@ -7,8 +7,6 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <ApplicationId>com.fennell.hrperipheral</ApplicationId>
-    <ApplicationDisplayVersion>1.0.0</ApplicationDisplayVersion>
-    <ApplicationVersion>2</ApplicationVersion>
     <AndroidStoreUncompressedFileExtensions>.so</AndroidStoreUncompressedFileExtensions>
     <EmbedAssembliesIntoApk>true</EmbedAssembliesIntoApk>
     <TrimMode>partial</TrimMode>

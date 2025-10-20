@@ -1,17 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.fennell.hrperipheral"
-    android:versionCode="1"
-    android:versionName="1.0">
+    package="com.fennell.hrperipheral">
 
-  <!-- Device type + BLE capability -->
-  <uses-feature android:name="android.hardware.type.watch" />
+  <!-- Form factor & capabilities -->
+  <uses-feature android:name="android.hardware.type.watch" android:required="true" />
   <uses-feature android:name="android.hardware.bluetooth_le" android:required="true" />
+  <!-- Not strictly required; don’t exclude non-touch devices -->
+  <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
+  <!-- If you *read* on-device HR sometimes, keep optional so devices without a sensor aren’t excluded -->
+  <uses-feature android:name="android.hardware.sensor.heartrate" android:required="false" />
 
   <!-- Permissions -->
-  <!-- Pre-Android 12 fallback (location is needed to scan BLE on < S) -->
+  <!-- Pre-Android 12 BLE (location needed for scan on < S) -->
   <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
-  <!-- THIS IS THE FIX: Scoping the legacy BLUETOOTH_ADMIN permission to older Android versions (API 30 and below) -->
   <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />
   <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" android:maxSdkVersion="30" />
 
@@ -20,15 +21,13 @@
       android:usesPermissionFlags="neverForLocation" />
   <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
   <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" />
-  
-  <!-- Service and sensor permissions -->
+
+  <!-- Foreground service + sensors + vibra -->
   <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
   <uses-permission android:name="android.permission.FOREGROUND_SERVICE_HEALTH" />
   <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
   <uses-permission android:name="android.permission.BODY_SENSORS" />
   <uses-permission android:name="android.permission.VIBRATE" />
-
-
   <uses-permission android:name="android.permission.WAKE_LOCK" />
 
   <application
@@ -39,14 +38,19 @@
       android:supportsRtl="true"
       android:theme="@android:style/Theme.DeviceDefault">
 
+    <!-- Keep Wear-only constraint -->
     <uses-library android:name="com.google.android.wearable" android:required="true" />
 
-    <service android:name=".HeartRateService"
-             android:foregroundServiceType="health|connectedDevice"
-             android:exported="false" />
-
+    <!-- MainActivity is generated from your [Activity(..., MainLauncher=true, Exported=true)] attribute -->
+    <!-- Settings Activity (no launcher) -->
     <activity
         android:name=".SettingsActivity"
-        android:exported="false" />    
+        android:exported="false" />
+
+    <!-- Foreground service (BLE peripheral + health) -->
+    <service
+        android:name=".HeartRateService"
+        android:foregroundServiceType="health|connectedDevice"
+        android:exported="false" />
   </application>
 </manifest>
