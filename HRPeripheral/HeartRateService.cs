@@ -46,7 +46,7 @@ public class HeartRateService : Service, ISensorEventListener
 
     // --- Logging verbosity flags ---
     private const bool LOG_VERBOSE_SENSORS = false; // set true only when you want raw sensor spam
-    private const bool LOG_ACCEL = false;           // set true only when debugging accel logic
+    private const bool LOG_ACCEL = false;           // set true only when debugging accel logicf
 
     // --- BLE peripheral wrapper and state ---
     private BlePeripheral? _ble;
@@ -158,6 +158,10 @@ public class HeartRateService : Service, ISensorEventListener
 
         // --- Start BLE peripheral advertising ---
         _ble = new BlePeripheral(this);
+
+        // ✅ Expose the instance globally so other activities (like Settings) can access it
+        BleHost.Peripheral = _ble;
+
         try
         {
             _ble.StartAdvertising();
@@ -363,7 +367,7 @@ public class HeartRateService : Service, ISensorEventListener
         // Notify BLE subscribers (only if advertising is active)
         if (_advRunning)
         {
-            _ble?.UpdateHeartRate(hr);
+            _ble?.NotifySubscribers(hr);
             LogD("BLE GATT characteristic updated with HR");
         }
         else

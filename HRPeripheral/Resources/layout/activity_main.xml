@@ -4,15 +4,15 @@
   Top-level FrameLayout for simple stacking and z-ordering.
   contentGroup holds all movable content; the gear button stays on top.
 -->
-
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:foregroundGravity="center">
+    android:foregroundGravity="center"
+    android:keepScreenOn="true">
 
   <!-- contentGroup
-       Holds HR text, graph, countdown, and the touch overlay.
-       paddingBottom nudges the whole group upward a bit. -->
+         Holds HR text, graph, countdown, and the touch overlay.
+         paddingBottom nudges the whole group upward a bit. -->
   <FrameLayout
       android:id="@+id/contentGroup"
       android:layout_width="match_parent"
@@ -29,6 +29,7 @@
         android:textStyle="bold"
         android:layout_gravity="center" />
 
+    <!-- HR strip graph -->
     <HRPeripheral.Views.HrGraphView
         android:id="@+id/hr_graph"
         android:layout_width="match_parent"
@@ -40,27 +41,28 @@
         android:paddingEnd="8dp"
         android:background="@android:color/transparent" />
 
-
     <!-- Full screen countdown ring shown during long press to exit -->
-    <hrperipheral.views.HoldCountdownView
+    <HRPeripheral.Views.HoldCountdownView
         android:id="@+id/holdCountdown"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_gravity="center" />
 
     <!-- Transparent touch overlay to detect long press to exit
-         Placed before the settings button so the button sits on top -->
+             Placed before the settings button so the button sits on top -->
     <View
         android:id="@+id/exitHoldOverlay"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:clickable="true"
-        android:focusable="false"
+        android:longClickable="true"
+        android:focusable="true"
         android:background="@android:color/transparent" />
+
   </FrameLayout>
 
   <!-- Settings button
-       Declared last so it appears above everything else -->
+         Declared last so it appears above everything else -->
   <ImageButton
       android:id="@+id/btnSettings"
       android:layout_width="48dp"
@@ -73,4 +75,5 @@
       android:padding="4dp"
       android:scaleType="centerInside"
       android:elevation="8dp" />
+
 </FrameLayout>

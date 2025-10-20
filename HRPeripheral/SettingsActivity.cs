@@ -7,13 +7,7 @@ using Android.Widget;
 namespace HRPeripheral;
 
 /// <summary>
-/// Activity that displays and saves user preferences for the HRPeripheral app.
-///
-/// Currently manages:
-///  • Whether the “hold-to-measure” feature is enabled.
-///  • How long the “hold” delay lasts (5–15 seconds adjustable by SeekBar).
-///
-/// All settings are persisted in SharedPreferences (`hrp_prefs`).
+/// Settings screen: manages hold-to-exit options and Bluetooth “forget devices”.
 /// </summary>
 [Activity(Label = "Settings", Theme = "@android:style/Theme.DeviceDefault")]
 public class SettingsActivity : Activity
@@ -21,48 +15,44 @@ public class SettingsActivity : Activity
     // ================================================================
     // CONSTANTS
     // ================================================================
-    // SharedPreferences file name
     private const string PREFS = "hrp_prefs";
-
-    // Keys for individual stored settings
     private const string PREF_HOLD_ENABLED = "hold_enabled";
-    private const string PREF_HOLD_SECONDS = "hold_seconds"; // offset 0..10 → maps to 5..15 seconds
+    private const string PREF_HOLD_SECONDS = "hold_seconds"; // 0..10 -> 5..15 seconds
 
     // ================================================================
-    // UI ELEMENTS
+    // UI
     // ================================================================
-    private Switch? _switchHold;     // Toggle switch to enable/disable “hold” feature
-    private SeekBar? _seekHold;      // Slider for adjusting hold time offset (0–10)
-    private TextView? _valueLabel;   // Displays the actual time (e.g., “8 seconds”)
+    private Switch? _switchHold;
+    private SeekBar? _seekHold;
+    private TextView? _valueLabel;
+
+    private Button? _btnForgetAll;
+    private LinearLayout? _knownContainer;
 
     // ================================================================
-    // LIFECYCLE: OnCreate
+    // LIFECYCLE
     // ================================================================
     protected override void OnCreate(Bundle? savedInstanceState)
     {
         base.OnCreate(savedInstanceState);
         SetContentView(Resource.Layout.settings_activity);
 
-        // Look up view references from layout
+        // hold-to-exit
         _switchHold = FindViewById<Switch>(Resource.Id.switchHold);
         _seekHold = FindViewById<SeekBar>(Resource.Id.seekHoldSeconds);
         _valueLabel = FindViewById<TextView>(Resource.Id.txtHoldValue);
 
-        // Configure SeekBar: range 0–10 (internally maps to 5–15 seconds)
         if (_seekHold != null)
         {
             _seekHold.Max = 10;
-
-            // Event: user drags slider to change hold duration
             _seekHold.ProgressChanged += (s, e) =>
             {
-                if (!e.FromUser) return; // ignore programmatic changes
-                UpdateSecondsLabel(e.Progress); // update text label
-                SaveOffset(e.Progress);         // save new value
+                if (!e.FromUser) return;
+                UpdateSecondsLabel(e.Progress);
+                SaveOffset(e.Progress);
             };
         }
 
-        // Configure Switch: enables or disables the "hold" functionality
         if (_switchHold != null)
         {
             _switchHold.CheckedChange += (s, e) =>
@@ -70,68 +60,124 @@ public class SettingsActivity : Activity
                 var sp = GetSharedPreferences(PREFS, FileCreationMode.Private);
                 using var edit = sp.Edit();
                 edit.PutBoolean(PREF_HOLD_ENABLED, e.IsChecked);
-                edit.Commit(); // commit immediately (blocking)
+                edit.Commit();
+            };
+        }
+
+        // bluetooth: forget all + list
+        _btnForgetAll = FindViewById<Button>(Resource.Id.btn_forget_all);
+        _knownContainer = FindViewById<LinearLayout>(Resource.Id.container_known_devices);
+
+        if (_btnForgetAll != null)
+        {
+            _btnForgetAll.Click += (_, __) =>
+            {
+                var ble = BleHost.Peripheral;
+                if (ble == null)
+                {
+                    Toast.MakeText(this, "BLE not available", ToastLength.Short).Show();
+                    return;
+                }
+
+                // stop → forget → start
+                ble.StopAdvertising();
+                ble.ForgetAllDevices(alsoUnbond: true); // set false to avoid unpairing via reflection
+                ble.StartAdvertising();
+
+                Toast.MakeText(this, "All devices forgotten", ToastLength.Short).Show();
+                RebuildKnownDevices();
             };
         }
     }
 
-    // ================================================================
-    // LIFECYCLE: OnResume
-    // ================================================================
-    /// <summary>
-    /// Reloads saved preferences every time the activity becomes visible.
-    /// Ensures UI reflects current settings.
-    /// </summary>
     protected override void OnResume()
     {
         base.OnResume();
 
-        // Access stored preferences
+        // prefs -> ui
         var sp = GetSharedPreferences(PREFS, FileCreationMode.Private);
-
-        // Load stored values (or defaults)
         bool enabled = sp.GetBoolean(PREF_HOLD_ENABLED, true);
-        int offset = sp.GetInt(PREF_HOLD_SECONDS, 5); // default = midpoint (10s)
-
-        // Clamp offset for safety (0..10)
+        int offset = sp.GetInt(PREF_HOLD_SECONDS, 5);
         if (offset < 0) offset = 0;
         if (offset > 10) offset = 10;
 
-        // Update UI with loaded settings
         if (_switchHold != null) _switchHold.Checked = enabled;
         if (_seekHold != null)
         {
             _seekHold.Progress = offset;
             UpdateSecondsLabel(offset);
         }
+
+        // refresh BLE list every time
+        RebuildKnownDevices();
     }
 
     // ================================================================
-    // HELPER METHODS
+    // HELPERS
     // ================================================================
-    /// <summary>
-    /// Converts a 0–10 slider offset into an actual number of seconds (5–15)
-    /// and updates the text label accordingly.
-    /// </summary>
     private void UpdateSecondsLabel(int offset)
     {
-        int seconds = 5 + offset; // offset 0 → 5s, offset 10 → 15s
+        int seconds = 5 + offset;
         if (_valueLabel != null)
             _valueLabel.Text = $"{seconds} seconds";
     }
 
-    /// <summary>
-    /// Saves the current SeekBar offset (0–10) to SharedPreferences.
-    /// </summary>
     private void SaveOffset(int offset)
     {
-        // Clamp to valid range for safety
         if (offset < 0) offset = 0;
         if (offset > 10) offset = 10;
 
         var sp = GetSharedPreferences(PREFS, FileCreationMode.Private);
         using var edit = sp.Edit();
         edit.PutInt(PREF_HOLD_SECONDS, offset);
-        edit.Commit(); // commit immediately (ensures persistence)
+        edit.Commit();
+    }
+
+    private void RebuildKnownDevices()
+    {
+        if (_knownContainer == null)
+            return;
+
+        _knownContainer.RemoveAllViews();
+
+        var ble = BleHost.Peripheral;
+        if (ble == null)
+        {
+            _knownContainer.AddView(new TextView(this) { Text = "BLE not available" });
+            return;
+        }
+
+        var list = ble.KnownDevices;
+        if (list.Count == 0)
+        {
+            _knownContainer.AddView(new TextView(this) { Text = "No known devices" });
+            return;
+        }
+
+        foreach (var addr in list)
+        {
+            // Row = [ address | Forget ]
+            var row = new LinearLayout(this)
+            {
+                Orientation = Orientation.Horizontal
+            };
+
+            var lpText = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WrapContent, 1f);
+            var tv = new TextView(this) { Text = addr };
+            tv.LayoutParameters = lpText;
+
+            var btn = new Button(this) { Text = "Forget" };
+            btn.Click += (_, __) =>
+            {
+                // forget a single device
+                ble.ForgetDevice(addr, alsoUnbond: true);
+                Toast.MakeText(this, $"Forgot {addr}", ToastLength.Short).Show();
+                RebuildKnownDevices();
+            };
+
+            row.AddView(tv);
+            row.AddView(btn);
+            _knownContainer.AddView(row);
+        }
     }
 }

@@ -3,9 +3,12 @@ using Android.Bluetooth;
 using Android.Bluetooth.LE;
 using Android.Content;
 using Android.OS;
+using Android.Preferences; // PreferenceManager / ISharedPreferences
 using Java.Util;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 
 // Avoid ambiguity (Android.Util.Debug vs System.Diagnostics.Debug)
 using Debug = System.Diagnostics.Debug;
@@ -13,18 +16,13 @@ using Debug = System.Diagnostics.Debug;
 namespace HRPeripheral;
 
 /// <summary>
-/// A minimal BLE *peripheral* (a.k.a. GATT server) that exposes the standard
+/// A minimal BLE *peripheral* (GATT server) that exposes the standard
 /// Heart Rate Service (0x180D) and streams Heart Rate Measurement notifications
 /// (0x2A37) to a central (phone/watch) after it subscribes.
 /// 
-/// Key responsibilities:
-///  • Start/stop advertising the Heart Rate Service.
-///  • Open a GATT server and add HR characteristics/descriptors.
-///  • Track whether a client has enabled notifications via the CCCD.
-///  • Push heart-rate updates via NotifyCharacteristicChanged.
-/// 
-/// Important: Central must write to the CCCD to enable notifications. We only
-///            send data *after* that write is received.
+/// Adds:
+///  • Tracks previously connected device addresses (KnownDevices)
+///  • ForgetDevice / ForgetAllDevices with optional OS unbond
 /// </summary>
 public class BlePeripheral : BluetoothGattServerCallback
 {
@@ -55,9 +53,42 @@ public class BlePeripheral : BluetoothGattServerCallback
     // Marked volatile so other threads see updates (BLE callbacks can be off main thread)
     private volatile BluetoothDevice? _subscribedDevice;
 
+    // =========================
+    // Known devices persistence
+    // =========================
+    private const string PREFS_NAME = "hrp_ble"; // namespace only (we use default shared prefs)
+    private const string KEY_KNOWN = "known_devices";
+
+    private ISharedPreferences? _prefs;
+    private readonly HashSet<string> _knownDevices = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Read-only view of known device MAC addresses (e.g., show in Settings).
+    /// </summary>
+    public IReadOnlyCollection<string> KnownDevices => _knownDevices.ToList().AsReadOnly();
+
     public BlePeripheral(Context context)
     {
         _context = context;
+
+        // Load known device addresses from shared preferences
+        _prefs = PreferenceManager.GetDefaultSharedPreferences(_context);
+        var csv = _prefs?.GetString(KEY_KNOWN, string.Empty) ?? string.Empty;
+        foreach (var a in csv.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries))
+            _knownDevices.Add(a.Trim());
+    }
+
+    private void SaveKnownDevices()
+    {
+        try
+        {
+            var csv = string.Join(",", _knownDevices);
+            _prefs?.Edit()?.PutString(KEY_KNOWN, csv)?.Apply();
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"SaveKnownDevices error: {ex}");
+        }
     }
 
     // =====================================================================
@@ -99,13 +130,11 @@ public class BlePeripheral : BluetoothGattServerCallback
 
             // Heart Rate Measurement characteristic:
             //   • NOTIFY only (no read/write by spec)
-            //   • We’ll attach a CCCD to let a client enable/disable notifications.
+            //   • CCCD lets a client enable/disable notifications.
             _hrCharacteristic = new BluetoothGattCharacteristic(
                 UUID_HEART_RATE_MEASUREMENT,
                 GattProperty.Notify,
-                // Using ReadEncrypted as a conservative permission on the char itself
-                // (the value is not read directly; CCCD is what matters for notifications)
-                GattPermission.ReadEncrypted
+                GattPermission.ReadEncrypted // conservative; value isn't read directly
             );
 
             // CCC descriptor (enables notifications/indications at the client’s request)
@@ -123,7 +152,7 @@ public class BlePeripheral : BluetoothGattServerCallback
             );
             bodySensorLocationCharacteristic.SetValue(new byte[] { 1 }); // 1=Chest (spec-defined values)
 
-            // Add both characteristics to the service, and the service to the server
+            // Add characteristics & service
             service.AddCharacteristic(_hrCharacteristic);
             service.AddCharacteristic(bodySensorLocationCharacteristic);
             _gattServer.AddService(service);
@@ -206,6 +235,100 @@ public class BlePeripheral : BluetoothGattServerCallback
     }
 
     // =====================================================================
+    // "Forget devices" — public APIs for Settings
+    // =====================================================================
+
+    /// <summary>
+    /// Forget ALL known devices. Optionally attempt to unpair/remove bond for each.
+    /// Also cancels any active GATT connection and drops the subscriber.
+    /// </summary>
+    /// <param name="alsoUnbond">If true, attempt to remove OS bond via reflection.</param>
+    public void ForgetAllDevices(bool alsoUnbond = false)
+    {
+        try
+        {
+            var adapter = _bluetoothManager?.Adapter;
+
+            if (adapter != null)
+            {
+                foreach (var addr in _knownDevices.ToList())
+                {
+                    BluetoothDevice? dev = null;
+                    try { dev = adapter.GetRemoteDevice(addr); } catch { /* ignore invalid addr */ }
+
+                    // Cancel any server-side connection
+                    try { if (dev != null) _gattServer?.CancelConnection(dev); } catch { /* ignore */ }
+
+                    // Optional: unbond (hidden API; best-effort)
+                    if (alsoUnbond && dev != null && dev.BondState == Bond.Bonded)
+                        TryRemoveBond(dev);
+                }
+            }
+
+            _subscribedDevice = null;
+            _knownDevices.Clear();
+            SaveKnownDevices();
+
+            Debug.WriteLine("All known devices forgotten.");
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"ForgetAllDevices error: {ex}");
+        }
+    }
+
+    /// <summary>
+    /// Forget a single device by MAC address. Optionally attempts OS unpair.
+    /// </summary>
+    public void ForgetDevice(string address, bool alsoUnbond = false)
+    {
+        if (string.IsNullOrWhiteSpace(address)) return;
+
+        try
+        {
+            var adapter = _bluetoothManager?.Adapter;
+            BluetoothDevice? dev = null;
+
+            if (adapter != null)
+            {
+                try { dev = adapter.GetRemoteDevice(address); } catch { /* ignore */ }
+            }
+
+            if (_subscribedDevice?.Address.Equals(address, StringComparison.OrdinalIgnoreCase) == true)
+                _subscribedDevice = null;
+
+            try { if (dev != null) _gattServer?.CancelConnection(dev); } catch { /* ignore */ }
+
+            if (alsoUnbond && dev != null && dev.BondState == Bond.Bonded)
+                TryRemoveBond(dev);
+
+            _knownDevices.Remove(address);
+            SaveKnownDevices();
+
+            Debug.WriteLine($"Device {address} forgotten.");
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"ForgetDevice error: {ex}");
+        }
+    }
+
+    private static void TryRemoveBond(BluetoothDevice dev)
+    {
+        try
+        {
+            // Hidden API reflection: dev.removeBond()
+            var method = dev.Class.GetMethod("removeBond");
+            method?.Invoke(dev);
+            Debug.WriteLine($"Requested unbond for {dev.Address}");
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Unbond (removeBond) failed for {dev.Address}: {ex.Message}");
+        }
+    }
+
+    // =====================================================================
     // GATT SERVER CALLBACKS (lifecycle + subscriptions)
     // =====================================================================
 
@@ -217,15 +340,21 @@ public class BlePeripheral : BluetoothGattServerCallback
     {
         base.OnConnectionStateChange(device, status, newState);
 
+        var addr = device?.Address ?? "(unknown)";
         if (newState == ProfileState.Connected)
         {
-            Debug.WriteLine($"Device connected: {device?.Address}. Waiting for subscription...");
-            // IMPORTANT: We do NOT mark them as a subscriber here.
-            // The correct time is when they write to the CCCD (see OnDescriptorWriteRequest).
+            Debug.WriteLine($"Device connected: {addr}. Waiting for subscription...");
+
+            // Track as "known"
+            if (device?.Address != null)
+            {
+                _knownDevices.Add(device.Address);
+                SaveKnownDevices();
+            }
         }
         else if (newState == ProfileState.Disconnected)
         {
-            Debug.WriteLine($"Device disconnected: {device?.Address}");
+            Debug.WriteLine($"Device disconnected: {addr}");
 
             // If the disconnected device was our current subscriber, clear it
             if (_subscribedDevice?.Address == device?.Address)
@@ -301,4 +430,14 @@ public class BlePeripheral : BluetoothGattServerCallback
             Debug.WriteLine("Advertising success!");
         }
     }
+
+    /// <summary>
+    /// Back-compat shim: older code called NotifySubscribers(bpm).
+    /// This simply forwards to UpdateHeartRate(bpm).
+    /// </summary>
+    public void NotifySubscribers(int bpm)
+    {
+        UpdateHeartRate(bpm);
+    }
+
 }
