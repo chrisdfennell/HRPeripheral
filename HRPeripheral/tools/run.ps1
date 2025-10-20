@@ -10,8 +10,9 @@ Menu launcher for common tasks:
   6) Change configuration
   7) Quit
 
-Asks for Debug or Release Candidate (RC) at start.
-Works when launched from /tools (auto cd to project root).
+- Asks for Debug or Release Candidate (RC) at start.
+- Works when launched from /tools (auto cd to project root).
+- Uses /tools/bump-version.ps1 for auto-versioning.
 ======================= #>
 
 param(
@@ -90,8 +91,27 @@ function Clean-Artifacts {
 }
 
 function Build-APK($cfg, [string]$Framework) {
+  # Auto-version (uses /tools/bump-version.ps1)
+  Write-Host "==> Bumping version..." -ForegroundColor Green
+  $ver = & "$PSScriptRoot\bump-version.ps1" -Patch
+  if ($LASTEXITCODE -ne 0) { throw "Version bump failed." }
+
+  if ($cfg.VersionSuffix) {
+    $displayWithSuffix = "$($ver.Display)-$($cfg.VersionSuffix)"
+  } else {
+    $displayWithSuffix = $ver.Display
+  }
+
+  Write-Host "   Display: $displayWithSuffix"
+  Write-Host "   Code   : $($ver.Code)"
+
   Write-Host "==> Restoring & publishing APK ($($cfg.Configuration))..." -ForegroundColor Green
-  $extra = @("/p:AndroidPackageFormat=apk","-m:1")
+  $extra = @(
+    "/p:AndroidPackageFormat=apk",
+    "/p:ApplicationDisplayVersion=$displayWithSuffix",
+    "/p:ApplicationVersion=$($ver.Code)",
+    "-m:1"
+  )
   if ($cfg.VersionSuffix) { $extra += "/p:VersionSuffix=$($cfg.VersionSuffix)" }
 
   dotnet publish .\HRPeripheral.csproj `

@@ -4,31 +4,46 @@
     android:layout_height="match_parent"
     android:foregroundGravity="center">
 
-  <TextView
-      android:id="@+id/hr_value"
-      android:layout_width="wrap_content"
-      android:layout_height="wrap_content"
-      android:text="-- bpm"
-      android:textSize="28sp"
-      android:textStyle="bold"
-      android:layout_gravity="center" />
-
-  <hrperipheral.views.HoldCountdownView
-      android:id="@+id/holdCountdown"
+  <!-- GROUP WE WANT TO NUDGE UP -->
+  <FrameLayout
+      android:id="@+id/contentGroup"
       android:layout_width="match_parent"
       android:layout_height="match_parent"
-      android:layout_gravity="center" />
+      android:paddingBottom="24dp">
 
-  <!-- Full-screen overlay (kept BEFORE the button so the button sits on top) -->
-  <View
-      android:id="@+id/exitHoldOverlay"
-      android:layout_width="match_parent"
-      android:layout_height="match_parent"
-      android:clickable="true"
-      android:focusable="false"
-      android:background="@android:color/transparent" />
+    <TextView
+        android:id="@+id/hr_value"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="-- bpm"
+        android:textSize="28sp"
+        android:textStyle="bold"
+        android:layout_gravity="center" />
 
-  <!-- SETTINGS BUTTON LAST = ON TOP -->
+    <hrperipheral.views.HrGraphView
+        android:id="@+id/hr_graph"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:layout_gravity="center_horizontal|bottom"
+        android:layout_marginBottom="8dp" />
+
+    <hrperipheral.views.HoldCountdownView
+        android:id="@+id/holdCountdown"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_gravity="center" />
+
+    <!-- Full-screen overlay (kept BEFORE the button so the button sits on top) -->
+    <View
+        android:id="@+id/exitHoldOverlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:clickable="true"
+        android:focusable="false"
+        android:background="@android:color/transparent" />
+  </FrameLayout>
+
+  <!-- SETTINGS BUTTON LAST = ON TOP (NOT MOVED BY paddingBottom ABOVE) -->
   <ImageButton
       android:id="@+id/btnSettings"
       android:layout_width="48dp"

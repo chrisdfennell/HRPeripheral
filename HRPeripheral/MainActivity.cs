@@ -1,4 +1,4 @@
-using Android.App;
+﻿using Android.App;
 using Android.Content;
 using Android.Content.PM;
 using Android.OS;
@@ -11,7 +11,7 @@ using SysException = System.Exception;
 // Xamarin.Android activity alias
 using Activity = Android.App.Activity;
 
-using HRPeripheral.Views; // HoldCountdownView
+using HRPeripheral.Views; // HoldCountdownView, HrGraphView
 
 namespace HRPeripheral;
 
@@ -19,6 +19,7 @@ namespace HRPeripheral;
     Label = "HR Peripheral",
     MainLauncher = true,
     Theme = "@android:style/Theme.DeviceDefault",
+    Exported = true, // required on API 31+ when you have an intent filter
     ConfigurationChanges = ConfigChanges.Orientation | ConfigChanges.ScreenSize
 )]
 public class MainActivity : Activity
@@ -27,6 +28,11 @@ public class MainActivity : Activity
     private const string PREFS = "hrp_prefs";
     private const string PREF_HOLD_ENABLED = "hold_enabled";
     private const string PREF_HOLD_SECONDS = "hold_seconds"; // stored as offset 0..10 (maps to 5..15s)
+
+    // Graph
+    private HRPeripheral.Views.HrGraphView? _hrGraph;
+    private readonly System.Collections.Generic.Queue<int> _hrHistory = new();
+    private const int MaxPoints = 120; // last ~2 minutes @ ~1 Hz
 
     private TextView? _hrText;
     private ImageButton? _btnSettings;
@@ -41,9 +47,9 @@ public class MainActivity : Activity
     private readonly Handler _handler = new Handler(Looper.MainLooper);
     private Java.Lang.IRunnable? _triggerExit;
     private Java.Lang.IRunnable? _progressTick;
-    private Java.Lang.IRunnable? _startCountdown; // starts after the pre-hold delay
+    private Java.Lang.IRunnable? _startCountdown; // starts after pre-hold delay
 
-    // Pre-hold delay so taps don�t trigger the countdown (1s by default)
+    // Pre-hold delay so taps don’t trigger the countdown (1s default)
     private const int PRE_HOLD_DELAY_MS = 1000;
 
     protected override void OnCreate(Bundle? savedInstanceState)
@@ -59,6 +65,7 @@ public class MainActivity : Activity
 
         // Views
         _hrText = FindViewById<TextView>(Resource.Id.hr_value);
+        _hrGraph = FindViewById<HRPeripheral.Views.HrGraphView>(Resource.Id.hr_graph);
         _exitOverlay = FindViewById(Resource.Id.exitHoldOverlay);
         _countdown = FindViewById<HoldCountdownView>(Resource.Id.holdCountdown);
         _btnSettings = FindViewById<ImageButton>(Resource.Id.btnSettings);
@@ -291,7 +298,7 @@ public class MainActivity : Activity
     {
         var sp = GetSharedPreferences(PREFS, FileCreationMode.Private);
 
-        // hold_enabled (default true) � read but behavior handled at touch-time
+        // hold_enabled (default true) – read but behavior handled at touch-time
         bool _ = sp.GetBoolean(PREF_HOLD_ENABLED, true);
 
         // hold_seconds stored as OFFSET 0..10; default offset 5 -> 10 seconds
@@ -333,7 +340,7 @@ public class MainActivity : Activity
         LoadPrefs();
 
         if (_updateReceiver == null)
-            _updateReceiver = new HrUpdateReceiver(_hrText);
+            _updateReceiver = new HrUpdateReceiver(this);
 
         var filter = new IntentFilter(HeartRateService.ACTION_UPDATE);
         if (Build.VERSION.SdkInt >= BuildVersionCodes.Tiramisu)
@@ -359,27 +366,39 @@ public class MainActivity : Activity
     }
 
     /// <summary>
-    /// Receives heart-rate updates from HeartRateService and updates the UI.
+    /// Receives heart-rate updates from HeartRateService and updates the UI + graph.
+    /// Also dims UI when service reports paused=true.
     /// </summary>
     private class HrUpdateReceiver : BroadcastReceiver
     {
-        private readonly TextView? _targetView;
-
-        public HrUpdateReceiver(TextView? targetView)
-        {
-            _targetView = targetView;
-        }
+        private readonly MainActivity _host;
+        public HrUpdateReceiver(MainActivity host) => _host = host;
 
         public override void OnReceive(Context? context, Intent? intent)
         {
-            if (intent?.Action == HeartRateService.ACTION_UPDATE)
+            if (intent?.Action != HeartRateService.ACTION_UPDATE) return;
+
+            int hr = intent.GetIntExtra("hr", 0);
+            bool paused = intent.GetBooleanExtra("paused", false);
+
+            // Text
+            if (_host._hrText != null)
             {
-                int hr = intent.GetIntExtra("hr", 0);
-                if (_targetView != null && hr > 0)
-                {
-                    _targetView.Text = $"{hr} bpm";
-                }
+                if (hr > 0)
+                    _host._hrText.Text = $"{hr} bpm";
+                // Optional: show paused hint even if we don't have a reading yet
+                if (paused && hr <= 0)
+                    _host._hrText.Text = "Paused";
             }
+
+            // Graph – use Push for your view
+            if (hr > 0)
+                _host._hrGraph?.Push(hr);
+
+            // Dim/undim UI based on pause state
+            float alpha = paused ? 0.5f : 1f;
+            _host._hrText?.Animate()?.Alpha(alpha)?.SetDuration(150)?.Start();
+            _host._hrGraph?.Animate()?.Alpha(alpha)?.SetDuration(150)?.Start();
         }
     }
 
