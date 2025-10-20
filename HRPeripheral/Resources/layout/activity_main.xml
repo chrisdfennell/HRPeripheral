@@ -29,13 +29,17 @@
         android:textStyle="bold"
         android:layout_gravity="center" />
 
-    <!-- Custom graph view near the bottom -->
-    <hrperipheral.views.HrGraphView
+    <HRPeripheral.Views.HrGraphView
         android:id="@+id/hr_graph"
         android:layout_width="match_parent"
         android:layout_height="56dp"
         android:layout_gravity="center_horizontal|bottom"
-        android:layout_marginBottom="8dp" />
+        android:layout_marginStart="24dp"
+        android:layout_marginEnd="24dp"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp"
+        android:background="@android:color/transparent" />
+
 
     <!-- Full screen countdown ring shown during long press to exit -->
     <hrperipheral.views.HoldCountdownView
