@@ -26,6 +26,17 @@
 
 ---
 
+## 📸 Screenshots
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/chrisdfennell/HRPeripheral/master/images/Screenshot%20-%20Main.png" width="260" alt="Main Screen">
+  <img src="https://raw.githubusercontent.com/chrisdfennell/HRPeripheral/master/images/Screenshot%20-%20Settings%201.png" width="260" alt="Settings 1">
+  <img src="https://raw.githubusercontent.com/chrisdfennell/HRPeripheral/master/images/Screenshot%20-%20Settings%202.png" width="260" alt="Settings 2">
+  <img src="https://raw.githubusercontent.com/chrisdfennell/HRPeripheral/master/images/Screenshot%20-%20Closing.png" width="260" alt="Closing Screen">
+</p>
+
+---
+
 ## ✨ Features
 - 💓 BLE Peripheral (GATT server) with **Heart Rate Service**
 - 📈 Full‑screen HR graph with live BPM overlay (top‑right)
