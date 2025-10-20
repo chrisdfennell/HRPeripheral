@@ -11,6 +11,14 @@ using SysException = System.Exception;
 
 namespace HRPeripheral;
 
+/// <summary>
+/// Foreground service that:
+/// • Reads HR from SensorManager (TYPE_HEART_RATE)
+/// • Auto-pauses/resumes using Samsung off-body (type 34) and/or accelerometer motion
+/// • Broadcasts updates to the UI (MainActivity)
+/// • Exposes a BLE Heart Rate peripheral (via BlePeripheral)
+/// • Shows a persistent notification while running
+/// </summary>
 [Service(
     Exported = false,
     ForegroundServiceType = ForegroundService.TypeHealth | ForegroundService.TypeConnectedDevice
@@ -19,6 +27,7 @@ public class HeartRateService : Service, ISensorEventListener
 {
     private const string TAG = "HRP/HeartRateService";
 
+    // Foreground notification channel and broadcast action used by MainActivity receiver
     public const string CHANNEL_ID = "hr_channel";
     public static readonly string ACTION_UPDATE = "com.fennell.hrperipheral.UPDATE";
     public const string ACTION_FORCE_CLOSE = "hrperipheral.action.FORCE_CLOSE";
@@ -26,32 +35,36 @@ public class HeartRateService : Service, ISensorEventListener
     // Samsung quirk: their LowLatencyOffbodyDetect reports 1 == on-wrist, 0 == off-wrist
     private const bool OFFBODY_ONE_IS_ON_WRIST = true;
 
-    // Toggle to completely disable auto-pause (no listeners, no handling)
+    // Feature flag: turn off to disable auto-pause logic entirely
     private const bool AUTO_PAUSE = true;
 
+    // --- Sensors & system handles ---
     private SensorManager? _sm;
     private Sensor? _hrSensor;
     private Sensor? _offBody; // TYPE_LOW_LATENCY_OFFBODY_DETECT (int 34) if present
-    private Sensor? _accel;   // motion fallback (and escape hatch)
+    private Sensor? _accel;   // accelerometer for motion-based fallback
 
+    // --- BLE peripheral wrapper and state ---
     private BlePeripheral? _ble;
     private bool _advRunning;
 
+    // --- HR and energy tracking ---
     private int _currentHr;
     private DateTime _start;
     private double _kcal;
     private CalorieEstimator? _cal;
+
     private BroadcastReceiver? _forceCloseReceiver;
 
-    // Auto-pause state
+    // --- Auto-pause state ---
     private bool _paused;
 
-    // Accelerometer motion detection
+    // --- Accelerometer motion detection (fallback) ---
     private const int FallbackStillWindowMs = 15_000; // still for 15s -> pause
     private const float MotionEps = 0.8f;             // |mag - g| > eps => motion
     private long _lastMotionMs;
 
-    // Auto-resume watchdog (optional but enabled here)
+    // --- Watchdog to auto-resume after extended pause (optional) ---
     private Handler? _wdHandler;
     private Java.Lang.IRunnable? _wdTick;
     private long _pausedSinceMs;
@@ -68,13 +81,21 @@ public class HeartRateService : Service, ISensorEventListener
         SysDebug.WriteLine($"{TAG} E: {msg} :: {ex}");
     }
 
+    /// <summary>
+    /// Service bootstrap:
+    /// • Create notification channel and post initial foreground notification
+    /// • Init sensors, register listeners
+    /// • Start BLE advertising
+    /// • Register optional broadcast receiver for external force-close
+    /// • Start watchdog timer
+    /// </summary>
     public override void OnCreate()
     {
         base.OnCreate();
 
         LogI("OnCreate() starting");
         _start = DateTime.UtcNow;
-        _cal = CalorieEstimator.DefaultMale75kgAge35();
+        _cal = CalorieEstimator.DefaultMale75kgAge35(); // default profile (can be replaced later)
         LogD("CalorieEstimator initialized");
 
         CreateChannel();
@@ -83,13 +104,13 @@ public class HeartRateService : Service, ISensorEventListener
         _sm = (SensorManager)GetSystemService(SensorService);
         if (_sm == null) { LogE("SensorManager is null!"); }
 
-        // Sensors
+        // --- Acquire sensors if present ---
         _hrSensor = _sm?.GetDefaultSensor(SensorType.HeartRate);
         LogD($"HR sensor present: {_hrSensor != null}");
 
         if (AUTO_PAUSE)
         {
-            // TYPE_LOW_LATENCY_OFFBODY_DETECT might not be in Xamarin enums; value is 34.
+            // TYPE_LOW_LATENCY_OFFBODY_DETECT might not exist on all devices (value 34).
             try { _offBody = _sm?.GetDefaultSensor((SensorType)34); } catch { _offBody = null; }
             _accel = _sm?.GetDefaultSensor(SensorType.Accelerometer);
             LogD($"Off-body sensor present: {_offBody != null} (type=34), accel present: {_accel != null}");
@@ -99,7 +120,7 @@ public class HeartRateService : Service, ISensorEventListener
             LogD("AUTO_PAUSE disabled");
         }
 
-        // Register listeners
+        // --- Register listeners with appropriate delays ---
         try
         {
             if (_hrSensor != null)
@@ -131,7 +152,7 @@ public class HeartRateService : Service, ISensorEventListener
             LogE("Sensor register error", ex);
         }
 
-        // BLE
+        // --- Start BLE peripheral advertising ---
         _ble = new BlePeripheral(this);
         try
         {
@@ -145,7 +166,7 @@ public class HeartRateService : Service, ISensorEventListener
             LogE("BLE start error", ex);
         }
 
-        // Optional broadcast-driven shutdown
+        // --- Optional broadcast-driven shutdown path (ACTION_FORCE_CLOSE) ---
         _forceCloseReceiver = new ForceCloseReceiver(this);
         var forceFilter = new IntentFilter(ACTION_FORCE_CLOSE);
         try
@@ -166,7 +187,7 @@ public class HeartRateService : Service, ISensorEventListener
             LogE("Register force-close receiver error", ex);
         }
 
-        // Start watchdog
+        // --- Start watchdog loop to auto-resume after prolonged pause ---
         _wdHandler = new Handler(Looper.MainLooper);
         _wdTick = new Java.Lang.Runnable(() =>
         {
@@ -186,8 +207,16 @@ public class HeartRateService : Service, ISensorEventListener
         LogI("OnCreate() complete");
     }
 
+    /// <summary>Unbound service (no binder returned).</summary>
     public override IBinder? OnBind(Intent? intent) => null;
 
+    /// <summary>
+    /// Cleanup on service destroy:
+    /// • Stop watchdog
+    /// • Unregister receivers and sensors
+    /// • Stop BLE advertising
+    /// • Stop foreground state
+    /// </summary>
     public override void OnDestroy()
     {
         LogI("OnDestroy()");
@@ -228,16 +257,24 @@ public class HeartRateService : Service, ISensorEventListener
     }
 
     // === ISensorEventListener ===
+
+    /// <summary>Sensor accuracy changes are logged for diagnostics.</summary>
     public void OnAccuracyChanged(Sensor? sensor, SensorStatus accuracy)
     {
         LogD($"OnAccuracyChanged: sensor={(sensor?.Type.ToString() ?? "null")} accuracy={accuracy}");
     }
 
+    /// <summary>
+    /// Central sensor event handler:
+    /// • Off-body (type 34): toggles paused state immediately
+    /// • Accelerometer: motion/no-motion fallback that can pause or resume
+    /// • Heart rate: parses BPM, integrates kcal, updates BLE + UI
+    /// </summary>
     public void OnSensorChanged(SensorEvent? e)
     {
         if (e?.Sensor == null) return;
 
-        // Verbose event dump
+        // Verbose event dump (safe-guarded)
         try
         {
             var sType = (int)e.Sensor.Type;
@@ -251,6 +288,7 @@ public class HeartRateService : Service, ISensorEventListener
 
         if (AUTO_PAUSE)
         {
+            // --- Off-body sensor path (fast on/off wrist detection) ---
             // TYPE_LOW_LATENCY_OFFBODY_DETECT (int 34)
             if ((int)e.Sensor.Type == 34)
             {
@@ -264,7 +302,7 @@ public class HeartRateService : Service, ISensorEventListener
                 return;
             }
 
-            // Accelerometer always active as an escape hatch
+            // --- Accelerometer fallback path (motion heuristic) ---
             if (e.Sensor.Type == SensorType.Accelerometer)
             {
                 if (e.Values == null || e.Values.Count < 3) return;
@@ -275,7 +313,7 @@ public class HeartRateService : Service, ISensorEventListener
 
                 LogD($"Accel: ax={ax:F3} ay={ay:F3} az={az:F3} |mag|={mag:F3} gdiff={Math.Abs(mag - 9.80665):F3} paused={_paused}");
 
-                // use 9.80665 m/s^2 as g
+                // use 9.80665 m/s^2 as g; significant deviation => motion
                 if (Math.Abs(mag - 9.80665) > MotionEps)
                 {
                     _lastMotionMs = now;
@@ -291,7 +329,7 @@ public class HeartRateService : Service, ISensorEventListener
             }
         }
 
-        // Heart rate path
+        // --- Heart rate path ---
         if (e.Sensor.Type != SensorType.HeartRate) return;
 
         int hr = (e.Values != null && e.Values.Count > 0)
@@ -300,11 +338,12 @@ public class HeartRateService : Service, ISensorEventListener
 
         LogD($"HR event: raw={(e.Values != null && e.Values.Count > 0 ? e.Values[0].ToString("F1") : "null")} parsed={hr} paused={_paused}");
 
+        // Basic validity filter
         if (hr <= 0 || hr > 230) { LogD($"HR ignored (out of range): {hr}"); return; }
 
         _currentHr = hr;
 
-        // Update calories (simple integration)
+        // Integrate calories using instantaneous rate (kcal/min) over time-step ~1s
         if (_cal != null)
         {
             double kcalPerMin = _cal.KcalPerMinute(hr);
@@ -312,7 +351,7 @@ public class HeartRateService : Service, ISensorEventListener
             LogD($"Calorie update: kcal/min={kcalPerMin:F3} total={_kcal:F3}");
         }
 
-        // Notify BLE subscribers (only if advertising)
+        // Notify BLE subscribers (only if advertising is active)
         if (_advRunning)
         {
             _ble?.UpdateHeartRate(hr);
@@ -323,12 +362,20 @@ public class HeartRateService : Service, ISensorEventListener
             LogD("BLE not advertising — HR not sent to subscribers");
         }
 
-        // Update UI
+        // Notify UI
         BroadcastUpdate();
     }
 
     // === Pause/Resume helpers ===
 
+    /// <summary>
+    /// Centralized pause/resume logic:
+    /// • Updates _paused state (idempotent)
+    /// • Registers/unregisters HR sensor
+    /// • Starts/stops BLE advertising
+    /// • Updates foreground notification text
+    /// • Broadcasts state to UI
+    /// </summary>
     private void PauseHr(bool pause, string reason)
     {
         if (_paused == pause) { LogD($"PauseHr: no change (paused={_paused}) reason={reason}"); return; }
@@ -383,7 +430,7 @@ public class HeartRateService : Service, ISensorEventListener
             LogE("PauseHr error", ex);
         }
 
-        // Inform UI
+        // Inform UI of new state
         var intent = new Intent(ACTION_UPDATE);
         intent.PutExtra("paused", _paused);
         intent.PutExtra("hr", _currentHr);
@@ -400,6 +447,9 @@ public class HeartRateService : Service, ISensorEventListener
         }
     }
 
+    /// <summary>
+    /// Rebuilds and re-posts the foreground notification with a new one-line status.
+    /// </summary>
     private void UpdateNotificationText(string text)
     {
         try
@@ -420,6 +470,9 @@ public class HeartRateService : Service, ISensorEventListener
         }
     }
 
+    /// <summary>
+    /// Sends the latest HR/kcal/paused state to the activity via a package-scoped broadcast.
+    /// </summary>
     private void BroadcastUpdate()
     {
         var intent = new Intent(ACTION_UPDATE);
@@ -439,6 +492,9 @@ public class HeartRateService : Service, ISensorEventListener
         }
     }
 
+    /// <summary>
+    /// Creates the O+ notification channel used by this service.
+    /// </summary>
     private void CreateChannel()
     {
         if (Build.VERSION.SdkInt >= BuildVersionCodes.O)
@@ -461,6 +517,9 @@ public class HeartRateService : Service, ISensorEventListener
         }
     }
 
+    /// <summary>
+    /// Local receiver allowing an external broadcast to shut the service down cleanly.
+    /// </summary>
     private sealed class ForceCloseReceiver : BroadcastReceiver
     {
         public const string TAG_FC = "HRP/ForceCloseReceiver";
@@ -473,6 +532,7 @@ public class HeartRateService : Service, ISensorEventListener
 
             if (intent?.Action != ACTION_FORCE_CLOSE) return;
 
+            // Best-effort cleanup; all wrapped in try-catch to be robust under system pressure.
             try { _svc._sm?.UnregisterListener(_svc); Log.Info(TAG_FC, "Unregistered service from SensorManager"); } catch (SysException) { }
             try
             {

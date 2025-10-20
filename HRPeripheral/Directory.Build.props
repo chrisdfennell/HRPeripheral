@@ -1,5 +1,4 @@
 <Project>
-  <!-- Disable the workload resolver so MSBuild uses MSBuildSDKsPath -->
   <PropertyGroup>
     <MSBuildEnableWorkloadResolver>false</MSBuildEnableWorkloadResolver>
   </PropertyGroup>

@@ -1,16 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  HRPeripheral main layout.
+  Top-level FrameLayout for simple stacking and z-ordering.
+  contentGroup holds all movable content; the gear button stays on top.
+-->
+
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:foregroundGravity="center">
 
-  <!-- GROUP WE WANT TO NUDGE UP -->
+  <!-- contentGroup
+       Holds HR text, graph, countdown, and the touch overlay.
+       paddingBottom nudges the whole group upward a bit. -->
   <FrameLayout
       android:id="@+id/contentGroup"
       android:layout_width="match_parent"
       android:layout_height="match_parent"
       android:paddingBottom="24dp">
 
+    <!-- Heart rate text centered on screen -->
     <TextView
         android:id="@+id/hr_value"
         android:layout_width="wrap_content"
@@ -20,6 +29,7 @@
         android:textStyle="bold"
         android:layout_gravity="center" />
 
+    <!-- Custom graph view near the bottom -->
     <hrperipheral.views.HrGraphView
         android:id="@+id/hr_graph"
         android:layout_width="match_parent"
@@ -27,13 +37,15 @@
         android:layout_gravity="center_horizontal|bottom"
         android:layout_marginBottom="8dp" />
 
+    <!-- Full screen countdown ring shown during long press to exit -->
     <hrperipheral.views.HoldCountdownView
         android:id="@+id/holdCountdown"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_gravity="center" />
 
-    <!-- Full-screen overlay (kept BEFORE the button so the button sits on top) -->
+    <!-- Transparent touch overlay to detect long press to exit
+         Placed before the settings button so the button sits on top -->
     <View
         android:id="@+id/exitHoldOverlay"
         android:layout_width="match_parent"
@@ -43,7 +55,8 @@
         android:background="@android:color/transparent" />
   </FrameLayout>
 
-  <!-- SETTINGS BUTTON LAST = ON TOP (NOT MOVED BY paddingBottom ABOVE) -->
+  <!-- Settings button
+       Declared last so it appears above everything else -->
   <ImageButton
       android:id="@+id/btnSettings"
       android:layout_width="48dp"
