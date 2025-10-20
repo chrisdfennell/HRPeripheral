@@ -20,7 +20,6 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
     <AndroidPackageFormat>aab</AndroidPackageFormat>
     <AndroidUseSharedRuntime>false</AndroidUseSharedRuntime>
-    <!-- THIS IS THE FIX: Explicitly disable AOT compilation to resolve the SDK error. -->
     <RunAOTCompilation>false</RunAOTCompilation>
     <AndroidKeyStore>false</AndroidKeyStore>
     <AndroidSigningKeyAlias></AndroidSigningKeyAlias>
