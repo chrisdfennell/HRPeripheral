@@ -11,6 +11,7 @@
   <!-- Permissions -->
   <!-- Pre-Android 12 fallback (location is needed to scan BLE on < S) -->
   <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
+  <!-- THIS IS THE FIX: Scoping the legacy BLUETOOTH_ADMIN permission to older Android versions (API 30 and below) -->
   <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />
   <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" android:maxSdkVersion="30" />
 
@@ -23,7 +24,9 @@
   <!-- Service and sensor permissions -->
   <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
   <uses-permission android:name="android.permission.FOREGROUND_SERVICE_HEALTH" />
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
   <uses-permission android:name="android.permission.BODY_SENSORS" />
+  <uses-permission android:name="android.permission.VIBRATE" />
 
 
   <uses-permission android:name="android.permission.WAKE_LOCK" />

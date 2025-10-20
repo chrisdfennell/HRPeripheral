@@ -5,30 +5,34 @@ using Android.Content;
 using Android.OS;
 using Java.Util;
 using System;
+using System.Diagnostics;
+
+// Add a using alias to resolve the ambiguity between .NET's Debug and Android's Debug.
+using Debug = System.Diagnostics.Debug;
 
 namespace HRPeripheral;
 
 public class BlePeripheral : BluetoothGattServerCallback
 {
     // Standard UUIDs for Heart Rate Service and Characteristics
-    static readonly UUID UUID_HRS = UUID.FromString("0000180D-0000-1000-8000-00805F9B34FB");
-    static readonly UUID UUID_HR_MEAS = UUID.FromString("00002A37-0000-1000-8000-00805F9B34FB");
-    static readonly UUID UUID_BODY_LOC = UUID.FromString("00002A38-0000-1000-8000-00805F9B34FB");
-    static readonly UUID UUID_CCC = UUID.FromString("00002902-0000-1000-8000-00805F9B34FB");
+    private static readonly UUID UUID_HEART_RATE_SERVICE = UUID.FromString("0000180D-0000-1000-8000-00805f9b34fb");
+    private static readonly UUID UUID_HEART_RATE_MEASUREMENT = UUID.FromString("00002A37-0000-1000-8000-00805f9b34fb");
+    private static readonly UUID UUID_BODY_SENSOR_LOCATION = UUID.FromString("00002A38-0000-1000-8000-00805f9b34fb");
+    private static readonly UUID UUID_CLIENT_CHARACTERISTIC_CONFIGURATION = UUID.FromString("00002902-0000-1000-8000-00805f9b34fb");
 
-    private readonly Context _ctx;
-    private BluetoothManager? _mgr;
-    private BluetoothAdapter? _adapter;
-    private BluetoothGattServer? _server;
-    private BluetoothLeAdvertiser? _adv;
-    private BluetoothGattCharacteristic? _hrChar;
-    private readonly AdvCb _callback = new();
+    private readonly Context _context;
+    private BluetoothManager? _bluetoothManager;
+    private BluetoothAdapter? _bluetoothAdapter;
+    private BluetoothGattServer? _gattServer;
+    private BluetoothLeAdvertiser? _bluetoothLeAdvertiser;
+    private BluetoothGattCharacteristic? _hrCharacteristic;
+    private readonly AdvertisingCallback _advertisingCallback = new();
 
-    private volatile BluetoothDevice? _subscribed;
+    private volatile BluetoothDevice? _subscribedDevice;
 
-    public BlePeripheral(Context ctx)
+    public BlePeripheral(Context context)
     {
-        _ctx = ctx;
+        _context = context;
     }
 
     // -----------------------------------------------------------------------
@@ -42,53 +46,58 @@ public class BlePeripheral : BluetoothGattServerCallback
     {
         try
         {
-            _mgr = (BluetoothManager)_ctx.GetSystemService(Context.BluetoothService)!;
-            _adapter = _mgr.Adapter;
+            _bluetoothManager = (BluetoothManager)_context.GetSystemService(Context.BluetoothService)!;
+            _bluetoothAdapter = _bluetoothManager.Adapter;
 
-            if (_adapter == null || !_adapter.IsEnabled)
+            if (_bluetoothAdapter == null || !_bluetoothAdapter.IsEnabled)
             {
-                System.Diagnostics.Debug.WriteLine("Bluetooth adapter missing or disabled.");
+                Debug.WriteLine("Bluetooth adapter missing or disabled.");
                 return false;
             }
 
-            if (!_adapter.IsMultipleAdvertisementSupported)
+            // It's better to set the name in the advertising packet itself if possible,
+            // but setting it on the adapter is a good fallback.
+            _bluetoothAdapter.SetName("HR Monitor");
+
+            if (!_bluetoothAdapter.IsMultipleAdvertisementSupported)
             {
-                System.Diagnostics.Debug.WriteLine("BLE advertising not supported.");
+                Debug.WriteLine("BLE advertising not supported.");
                 return false;
             }
 
             // Create GATT Server
-            _server = _mgr.OpenGattServer(_ctx, this);
-            var service = new BluetoothGattService(UUID_HRS, GattServiceType.Primary);
+            _gattServer = _bluetoothManager.OpenGattServer(_context, this);
+            var service = new BluetoothGattService(UUID_HEART_RATE_SERVICE, GattServiceType.Primary);
 
-            // Heart Rate Measurement characteristic
-            _hrChar = new BluetoothGattCharacteristic(
-                UUID_HR_MEAS,
+            _hrCharacteristic = new BluetoothGattCharacteristic(
+                UUID_HEART_RATE_MEASUREMENT,
                 GattProperty.Notify,
-                GattPermission.Read
+                GattPermission.ReadEncrypted
             );
 
-            // CCC descriptor
-            var ccc = new BluetoothGattDescriptor(UUID_CCC,
-                GattDescriptorPermission.Read | GattDescriptorPermission.Write);
-            _hrChar.AddDescriptor(ccc);
+            var cccDescriptor = new BluetoothGattDescriptor(UUID_CLIENT_CHARACTERISTIC_CONFIGURATION,
+                GattDescriptorPermission.ReadEncrypted | GattDescriptorPermission.WriteEncrypted);
+            _hrCharacteristic.AddDescriptor(cccDescriptor);
 
-            // Body location (e.g., chest)
-            var bodyLoc = new BluetoothGattCharacteristic(
-                UUID_BODY_LOC,
+            var bodySensorLocationCharacteristic = new BluetoothGattCharacteristic(
+                UUID_BODY_SENSOR_LOCATION,
                 GattProperty.Read,
-                GattPermission.Read);
-            bodyLoc.SetValue(new byte[] { 1 }); // Chest
+                GattPermission.ReadEncrypted
+            );
+            bodySensorLocationCharacteristic.SetValue(new byte[] { 1 }); // 1 = Chest
 
-            // Add to service
-            service.AddCharacteristic(_hrChar);
-            service.AddCharacteristic(bodyLoc);
-            _server.AddService(service);
+            service.AddCharacteristic(_hrCharacteristic);
+            service.AddCharacteristic(bodySensorLocationCharacteristic);
+            _gattServer.AddService(service);
 
-            // Configure advertiser
-            _adv = _adapter.BluetoothLeAdvertiser;
-            var data = new AdvertiseData.Builder()
-                .AddServiceUuid(new ParcelUuid(UUID_HRS))
+            _bluetoothLeAdvertiser = _bluetoothAdapter.BluetoothLeAdvertiser;
+
+            var advertiseData = new AdvertiseData.Builder()
+                .AddServiceUuid(new ParcelUuid(UUID_HEART_RATE_SERVICE))
+                .SetIncludeTxPowerLevel(false)
+                .Build();
+
+            var scanResponse = new AdvertiseData.Builder()
                 .SetIncludeDeviceName(true)
                 .Build();
 
@@ -98,13 +107,13 @@ public class BlePeripheral : BluetoothGattServerCallback
                 .SetConnectable(true)
                 .Build();
 
-            _adv.StartAdvertising(settings, data, _callback);
-            System.Diagnostics.Debug.WriteLine("BLE advertising started successfully.");
+            _bluetoothLeAdvertiser.StartAdvertising(settings, advertiseData, scanResponse, _advertisingCallback);
+            Debug.WriteLine("BLE advertising started successfully.");
             return true;
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"BLE start error: {ex}");
+            Debug.WriteLine($"BLE start error: {ex}");
             return false;
         }
     }
@@ -114,9 +123,9 @@ public class BlePeripheral : BluetoothGattServerCallback
     /// </summary>
     public void StopAdvertising()
     {
-        try { _adv?.StopAdvertising(_callback); } catch { }
-        try { _server?.Close(); } catch { }
-        System.Diagnostics.Debug.WriteLine("BLE advertising stopped.");
+        try { _bluetoothLeAdvertiser?.StopAdvertising(_advertisingCallback); } catch { }
+        try { _gattServer?.Close(); } catch { }
+        Debug.WriteLine("BLE advertising stopped.");
     }
 
     /// <summary>
@@ -124,24 +133,23 @@ public class BlePeripheral : BluetoothGattServerCallback
     /// </summary>
     public void UpdateHeartRate(int bpm)
     {
-        if (_server == null || _subscribed == null || _hrChar == null)
+        if (_gattServer == null || _subscribedDevice == null || _hrCharacteristic == null)
             return;
 
-        // Flags = 0x00 (UINT8 BPM)
         byte flags = 0x00;
-        byte hb = (byte)Math.Max(0, Math.Min(255, bpm));
+        byte heartRateValue = (byte)Math.Max(0, Math.Min(255, bpm));
 
-        var payload = new byte[] { flags, hb };
-        _hrChar.SetValue(payload);
+        var payload = new byte[] { flags, heartRateValue };
+        _hrCharacteristic.SetValue(payload);
 
         try
         {
-            _server.NotifyCharacteristicChanged(_subscribed, _hrChar, false);
-            System.Diagnostics.Debug.WriteLine($"Sent HR notification: {bpm} bpm");
+            _gattServer.NotifyCharacteristicChanged(_subscribedDevice, _hrCharacteristic, false);
+            Debug.WriteLine($"Sent HR notification: {bpm} bpm");
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"HR notify error: {ex}");
+            Debug.WriteLine($"HR notify error: {ex}");
         }
     }
 
@@ -149,67 +157,73 @@ public class BlePeripheral : BluetoothGattServerCallback
     // GATT CALLBACKS
     // -----------------------------------------------------------------------
 
-    public override void OnConnectionStateChange(BluetoothDevice device, ProfileState status, ProfileState newState)
+    public override void OnConnectionStateChange(BluetoothDevice? device, ProfileState status, ProfileState newState)
     {
         base.OnConnectionStateChange(device, status, newState);
 
         if (newState == ProfileState.Connected)
         {
-            _subscribed = device;
-            System.Diagnostics.Debug.WriteLine($"Device connected: {device.Address}");
+            Debug.WriteLine($"Device connected: {device?.Address}. Waiting for subscription...");
+            // DO NOT set the subscribed device here. Wait for the OnDescriptorWriteRequest.
         }
-        else if (newState == ProfileState.Disconnected && _subscribed == device)
+        else if (newState == ProfileState.Disconnected)
         {
-            _subscribed = null;
-            System.Diagnostics.Debug.WriteLine($"Device disconnected: {device.Address}");
+            Debug.WriteLine($"Device disconnected: {device?.Address}");
+            // If the disconnected device was our subscriber, clear it.
+            if (_subscribedDevice?.Address == device?.Address)
+            {
+                _subscribedDevice = null;
+            }
         }
     }
 
-    public override void OnDescriptorWriteRequest(BluetoothDevice device, int requestId, BluetoothGattDescriptor descriptor,
-        bool preparedWrite, bool responseNeeded, int offset, byte[] value)
+    public override void OnDescriptorWriteRequest(BluetoothDevice? device, int requestId, BluetoothGattDescriptor? descriptor,
+        bool preparedWrite, bool responseNeeded, int offset, byte[]? value)
     {
         base.OnDescriptorWriteRequest(device, requestId, descriptor, preparedWrite, responseNeeded, offset, value);
 
-        if (descriptor.Uuid.Equals(UUID_CCC))
+        Debug.WriteLine($"OnDescriptorWriteRequest from {device?.Address}");
+
+        if (descriptor?.Uuid.Equals(UUID_CLIENT_CHARACTERISTIC_CONFIGURATION) == true)
         {
-            _server?.SendResponse(device, requestId, GattStatus.Success, 0, value);
-            var enabled = value != null && value.Length >= 2 && value[0] == 0x01 && value[1] == 0x00;
-            if (enabled)
+            // Acknowledge the write request immediately.
+            if (responseNeeded)
             {
-                _subscribed = device;
-                System.Diagnostics.Debug.WriteLine("Notifications enabled.");
+                _gattServer?.SendResponse(device, requestId, GattStatus.Success, 0, null);
             }
-            else if (_subscribed == device)
+
+            // Check what value the client wrote.
+            var notificationsEnabled = value != null && value.Length > 0 && value[0] == BluetoothGattDescriptor.EnableNotificationValue[0];
+
+            if (notificationsEnabled)
             {
-                _subscribed = null;
-                System.Diagnostics.Debug.WriteLine("Notifications disabled.");
+                Debug.WriteLine("Notifications ENABLED by client.");
+                _subscribedDevice = device; // THIS IS THE FIX: Only set subscriber after they've asked for data.
+            }
+            else
+            {
+                Debug.WriteLine("Notifications DISABLED by client.");
+                if (_subscribedDevice?.Address == device?.Address)
+                {
+                    _subscribedDevice = null;
+                }
             }
         }
     }
-
-    // --- Compatibility shims for older call sites ---
-    public bool StartAsync()
-        => StartAdvertising();
-
-    public void Stop()
-        => StopAdvertising();
-
-    public void NotifyHeartRate(byte bpm)
-        => UpdateHeartRate(bpm);
 
     // -----------------------------------------------------------------------
     // INTERNAL ADVERTISING CALLBACK
     // -----------------------------------------------------------------------
-    private class AdvCb : AdvertiseCallback
+    private class AdvertisingCallback : AdvertiseCallback
     {
         public override void OnStartFailure(AdvertiseFailure errorCode)
         {
-            System.Diagnostics.Debug.WriteLine($"Advertising failed: {errorCode}");
+            Debug.WriteLine($"Advertising failed: {errorCode}");
         }
 
-        public override void OnStartSuccess(AdvertiseSettings settingsInEffect)
+        public override void OnStartSuccess(AdvertiseSettings? settingsInEffect)
         {
-            System.Diagnostics.Debug.WriteLine("Advertising success!");
+            Debug.WriteLine("Advertising success!");
         }
     }
 }

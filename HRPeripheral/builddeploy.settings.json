@@ -1,0 +1,11 @@
+{
+  "ActivityName": "crc64e341e0a65a6014c6.MainActivity",
+  "PackageName": "com.fennell.hrperipheral",
+  "PairPort": "",
+  "ProjectDirectory": "C:\\Users\\Infan\\OneDrive\\Programming\\C#\\HRPeripheral\\HRPeripheral",
+  "LogToFile": true,
+  "AdbPort": "44139",
+  "Configuration": "Debug",
+  "Framework": "net9.0-android",
+  "DeviceIP": "192.168.86.28"
+}

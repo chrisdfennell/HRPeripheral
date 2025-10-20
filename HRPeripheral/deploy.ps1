@@ -1,19 +1,19 @@
-﻿<# =======================
- build-install-run.ps1
+<# =======================
+ deploy-install-run.ps1
 ------------------------
 What it does:
+- Skips the build process entirely.
+- Locates the most recent existing APK.
 - Interactively asks for device connection details.
-- Cleans (light)
-- Builds & packages APK
-- (Optionally) pairs & connects to the watch over Wi-Fi ADB
-- Uninstalls old app
-- Installs new APK
-- Launches app
-- Streams logcat filtered to the app PID
+- (Optionally) pairs & connects to the watch over Wi-Fi ADB.
+- Uninstalls old app.
+- Installs the found APK.
+- Launches app.
+- Streams logcat filtered to the app PID.
 ======================= #>
 
 # =======================
-# CONFIG (Edit these if they don't change often)
+# CONFIG (Used to find the existing APK)
 # =======================
 $Package = "com.fennell.hrperipheral"
 $Configuration = "Debug"
@@ -26,21 +26,13 @@ $ErrorActionPreference = "Stop"
 
 Write-Host "--- Device Configuration ---" -ForegroundColor Cyan
 $DeviceIpInput = Read-Host "Enter the watch's IP Address (or press Enter for 192.168.86.28)"
-if ([string]::IsNullOrWhiteSpace($DeviceIpInput)) {
-    $DeviceIp = "192.168.86.28"
-} else {
-    $DeviceIp = $DeviceIpInput
-}
+$DeviceIp = if ([string]::IsNullOrWhiteSpace($DeviceIpInput)) { "192.168.86.28" } else { $DeviceIpInput }
 
 $AdbPortInput = Read-Host "Enter the watch's ADB Port (or press Enter for 44139)"
-if ([string]::IsNullOrWhiteSpace($AdbPortInput)) {
-    $AdbPort = "44139"
-} else {
-    $AdbPort = $AdbPortInput
-}
+$AdbPort = if ([string]::IsNullOrWhiteSpace($AdbPortInput)) { "44139" } else { $AdbPortInput }
 
 $WatchAdb = "$($DeviceIp):$($AdbPort)"
-Write-Host "Using device address: $WatchAdb" -ForegroundColor Yellow
+Write-Host "Using device address: $WatchAdb"
 
 $needsPairing = Read-Host "Do you need to PAIR the device first? [y/n]"
 if ($needsPairing -eq 'y') {
@@ -52,32 +44,15 @@ if ($needsPairing -eq 'y') {
 $needsConnecting = Read-Host "Do you need to CONNECT to the device? (Enter 'n' if already connected) [y/n]"
 
 # =======================
-# PREP
+# LOCATE APK
 # =======================
-Write-Host "==> Ensuring one MSBuild node and no fast-deploy leftovers..." -ForegroundColor Green
-$env:MSBUILDDISABLENODEREUSE = "1"
-
-# Optional: quick clean of obj/bin to avoid stale fast-deploy bits
-if (Test-Path ".\bin") { Remove-Item -Recurse -Force ".\bin" }
-if (Test-Path ".\obj") { Remove-Item -Recurse -Force ".\obj" }
-
-# =======================
-# BUILD + PACKAGE
-# =======================
-Write-Host "==> Restoring & building APK..." -ForegroundColor Green
-dotnet build `
-  -c $Configuration `
-  -f $Framework `
-  -t:PackageForAndroid `
-  -m:1
-
 Write-Host "==> Locating newest APK..." -ForegroundColor Green
 $apk = Get-ChildItem -Path ".\bin\$Configuration\$Framework" -Filter *.apk |
         Sort-Object LastWriteTime -Descending |
         Select-Object -First 1
 
 if (-not $apk) {
-  throw "No APK found under .\bin\$Configuration\$Framework. Build may have failed."
+  throw "No APK found under .\bin\$Configuration\$Framework. You may need to run the build script first."
 }
 
 Write-Host ("     APK: " + $apk.FullName)
@@ -109,7 +84,6 @@ if ($devices -notlike "*$WatchAdb*") {
 # INSTALL
 # =======================
 Write-Host "==> Uninstalling old app (ignore failure if not installed)..." -ForegroundColor Green
-# Use -ErrorAction SilentlyContinue to prevent script from stopping if uninstall fails (e.g., app not present)
 adb -s $WatchAdb uninstall $Package -ErrorAction SilentlyContinue | Out-Null
 
 Write-Host "==> Installing new APK..." -ForegroundColor Green
