@@ -1,5 +1,5 @@
 <# =======================
- run.ps1  — HRPeripheral tool
+ run.ps1 — HRPeripheral tool
 -------------------------
 Menu launcher for common tasks:
   1) Build APK
@@ -39,7 +39,8 @@ function Select-Configuration {
 }
 
 function Prompt-Device {
-  Write-Host "`n--- Device Configuration ---" -ForegroundColor Cyan
+  Write-Host ""
+  Write-Host "--- Device Configuration ---" -ForegroundColor Cyan
   $DeviceIp  = Read-Host "Watch IP (default 192.168.86.28)"
   if ([string]::IsNullOrWhiteSpace($DeviceIp)) { $DeviceIp = "192.168.86.28" }
 
@@ -87,47 +88,71 @@ function Clean-Artifacts {
   dotnet clean .\HRPeripheral.csproj
   if (Test-Path ".\bin") { Remove-Item -Recurse -Force ".\bin" -ErrorAction SilentlyContinue }
   if (Test-Path ".\obj") { Remove-Item -Recurse -Force ".\obj" -ErrorAction SilentlyContinue }
-  Write-Host "✅ Clean complete." -ForegroundColor Green
+  Write-Host "[OK] Clean complete." -ForegroundColor Green
+}
+
+# Prints a friendly hint to run a Clean when certain known errors occur
+function Suggest-CleanHint([string]$Message) {
+  $m = $Message
+  if ($m -match "Version bump failed" -or
+      $m -match "No APK found under" -or
+      $m -match "failed linking file resources" -or
+      $m -match "APT20\d\d" -or
+      $m -match "APT2259") {
+    Write-Host "Hint: If you continue to see this error, try menu option [4] Clean (bin/obj), then rebuild." -ForegroundColor Yellow
+  }
 }
 
 function Build-APK($cfg, [string]$Framework) {
-  # Auto-version (uses /tools/bump-version.ps1)
-  Write-Host "==> Bumping version..." -ForegroundColor Green
-  $ver = & "$PSScriptRoot\bump-version.ps1" -Patch
-  if ($LASTEXITCODE -ne 0) { throw "Version bump failed." }
+  try {
+    # Auto-version (uses /tools/bump-version.ps1)
+    Write-Host "==> Bumping version..." -ForegroundColor Green
+    $ver = & "$PSScriptRoot\bump-version.ps1" -Patch
+    if ($LASTEXITCODE -ne 0 -or -not $ver) { throw "Version bump failed." }
 
-  if ($cfg.VersionSuffix) {
-    $displayWithSuffix = "$($ver.Display)-$($cfg.VersionSuffix)"
-  } else {
-    $displayWithSuffix = $ver.Display
+    if ($cfg.VersionSuffix) {
+      $displayWithSuffix = "$($ver.Display)-$($cfg.VersionSuffix)"
+    } else {
+      $displayWithSuffix = $ver.Display
+    }
+
+    Write-Host ("   Display: " + $displayWithSuffix)
+    Write-Host ("   Code   : " + $ver.Code)
+
+    Write-Host "==> Restoring and publishing APK ($($cfg.Configuration))..." -ForegroundColor Green
+    $extra = @(
+      "/p:AndroidPackageFormat=apk",
+      "/p:ApplicationDisplayVersion=$displayWithSuffix",
+      "/p:ApplicationVersion=$($ver.Code)",
+      "-m:1"
+    )
+    if ($cfg.VersionSuffix) { $extra += "/p:VersionSuffix=$($cfg.VersionSuffix)" }
+
+    dotnet publish .\HRPeripheral.csproj `
+      -c $cfg.Configuration `
+      -f $Framework `
+      @extra
   }
-
-  Write-Host "   Display: $displayWithSuffix"
-  Write-Host "   Code   : $($ver.Code)"
-
-  Write-Host "==> Restoring & publishing APK ($($cfg.Configuration))..." -ForegroundColor Green
-  $extra = @(
-    "/p:AndroidPackageFormat=apk",
-    "/p:ApplicationDisplayVersion=$displayWithSuffix",
-    "/p:ApplicationVersion=$($ver.Code)",
-    "-m:1"
-  )
-  if ($cfg.VersionSuffix) { $extra += "/p:VersionSuffix=$($cfg.VersionSuffix)" }
-
-  dotnet publish .\HRPeripheral.csproj `
-    -c $cfg.Configuration `
-    -f $Framework `
-    @extra
+  catch {
+    Suggest-CleanHint $_.ToString()
+    throw
+  }
 }
 
 function Find-APK([string]$Configuration, [string]$Framework) {
-  Write-Host "==> Locating newest APK..." -ForegroundColor Green
-  $apk = Get-ChildItem -Path ".\bin\$Configuration\$Framework" -Recurse -Filter *.apk |
-    Sort-Object LastWriteTime -Descending |
-    Select-Object -First 1
-  if (-not $apk) { throw "No APK found under .\bin\$Configuration\$Framework." }
-  Write-Host ("     APK: " + $apk.FullName) -ForegroundColor Yellow
-  return $apk
+  try {
+    Write-Host "==> Locating newest APK..." -ForegroundColor Green
+    $apk = Get-ChildItem -Path ".\bin\$Configuration\$Framework" -Recurse -Filter *.apk -ErrorAction SilentlyContinue |
+      Sort-Object LastWriteTime -Descending |
+      Select-Object -First 1
+    if (-not $apk) { throw "No APK found under .\bin\$Configuration\$Framework." }
+    Write-Host ("     APK: " + $apk.FullName) -ForegroundColor Yellow
+    return $apk
+  }
+  catch {
+    Suggest-CleanHint $_.ToString()
+    throw
+  }
 }
 
 function Install-Launch-Logcat([string]$WatchAdb, [string]$Package, [string]$ApkPath) {
@@ -167,7 +192,8 @@ $cfg = Select-Configuration
 :menu while ($true) {
   $verSuffixText = if ($cfg.VersionSuffix) { " ($($cfg.VersionSuffix))" } else { "" }
 
-  Write-Host "`n================ MENU ================" -ForegroundColor Cyan
+  Write-Host ""
+  Write-Host "================ MENU ================" -ForegroundColor Cyan
   Write-Host "[1] Build APK ($($cfg.Configuration))"
   Write-Host "[2] Deploy latest APK ($($cfg.Configuration))"
   Write-Host "[3] Build + Deploy ($($cfg.Configuration))"
@@ -182,7 +208,7 @@ $cfg = Select-Configuration
       "1" {
         Build-APK $cfg $Framework
         $null = Find-APK $cfg.Configuration $Framework
-        Write-Host "✅ Build complete." -ForegroundColor Green
+        Write-Host "[OK] Build complete." -ForegroundColor Green
       }
       "2" {
         $dev = Prompt-Device
@@ -201,7 +227,7 @@ $cfg = Select-Configuration
       "5" {
         $dev = Prompt-Device
         Pair-Connect $dev.WatchAdb $dev.PairInfo
-        Write-Host "✅ Device is connected." -ForegroundColor Green
+        Write-Host "[OK] Device is connected." -ForegroundColor Green
       }
       "6" { $cfg = Select-Configuration }
       "7" { break menu }
@@ -209,6 +235,8 @@ $cfg = Select-Configuration
     }
   }
   catch {
-    Write-Host "❌ $_" -ForegroundColor Red
+    Write-Host "ERROR: $_" -ForegroundColor Red
+    # Suggest a clean if the error matches known stale-output scenarios
+    Suggest-CleanHint $_.ToString()
   }
 }
