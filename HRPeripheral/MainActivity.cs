@@ -8,9 +8,10 @@ using System;
 // Explicit aliases to avoid ambiguous types
 using SysDebug = System.Diagnostics.Debug;
 using SysException = System.Exception;
-
-// Add using aliases to resolve ambiguity between .NET and Android types.
+// Xamarin.Android activity alias
 using Activity = Android.App.Activity;
+
+using HRPeripheral.Views; // HoldCountdownView
 
 namespace HRPeripheral;
 
@@ -22,46 +23,73 @@ namespace HRPeripheral;
 )]
 public class MainActivity : Activity
 {
+    // SharedPreferences
+    private const string PREFS = "hrp_prefs";
+    private const string PREF_HOLD_ENABLED = "hold_enabled";
+    private const string PREF_HOLD_SECONDS = "hold_seconds"; // stored as offset 0..10 (maps to 5..15s)
+
     private TextView? _hrText;
     private HrUpdateReceiver? _updateReceiver;
 
-    // Force-quit press & hold
+    // Press & hold to exit
     private View? _exitOverlay;
+    private HoldCountdownView? _countdown;
     private long _holdStart;
     private bool _holding;
-    private readonly long _holdMillis = 10_000L; // 10 seconds
+    private long _holdMillis = 10_000L; // will be overwritten by prefs
     private readonly Handler _handler = new Handler(Looper.MainLooper);
     private Java.Lang.IRunnable? _triggerExit;
+    private Java.Lang.IRunnable? _progressTick;
 
     protected override void OnCreate(Bundle? savedInstanceState)
     {
         base.OnCreate(savedInstanceState);
         SetContentView(Resource.Layout.activity_main);
 
+        // Keep screen on
         Window?.AddFlags(WindowManagerFlags.KeepScreenOn);
 
+        // Load prefs first so _holdMillis is correct
+        LoadPrefs();
+
+        // Views
         _hrText = FindViewById<TextView>(Resource.Id.hr_value);
-        _exitOverlay = FindViewById(Resource.Id.exitHoldOverlay); // full-screen invisible overlay
+        _exitOverlay = FindViewById(Resource.Id.exitHoldOverlay);
+        _countdown = FindViewById<HoldCountdownView>(Resource.Id.holdCountdown);
 
+        // Start service (after permissions)
         if (!BlePermissions.HasAll(this))
-        {
             BlePermissions.Request(this);
-        }
         else
-        {
             StartHrService();
-        }
 
-        // Long-hold overlay setup
+        // Runnable that fires when hold completes
         _triggerExit = new Java.Lang.Runnable(() =>
         {
             if (_holding && (Java.Lang.JavaSystem.CurrentTimeMillis() - _holdStart) >= _holdMillis)
             {
                 Haptic(longBuzz: true);
+                if (_countdown != null) _countdown.Visibility = ViewStates.Gone;
                 ForceCloseApp();
             }
         });
 
+        // Runnable to update the ring every 50ms
+        _progressTick = new Java.Lang.Runnable(() =>
+        {
+            if (!_holding) return;
+
+            long elapsed = Java.Lang.JavaSystem.CurrentTimeMillis() - _holdStart;
+            float p = (float)elapsed / (float)_holdMillis;
+            if (_countdown != null) _countdown.SetProgress(p);
+
+            if (elapsed < _holdMillis)
+            {
+                _handler.PostDelayed(_progressTick, 50);
+            }
+        });
+
+        // Touch handling for the full-screen overlay
         if (_exitOverlay != null)
         {
             _exitOverlay.Touch += (s, e) =>
@@ -69,11 +97,22 @@ public class MainActivity : Activity
                 switch (e.Event.ActionMasked)
                 {
                     case MotionEventActions.Down:
+                        if (!IsHoldEnabled())
+                        {
+                            e.Handled = false;
+                            return;
+                        }
                         _holdStart = Java.Lang.JavaSystem.CurrentTimeMillis();
                         _holding = true;
+                        if (_countdown != null)
+                        {
+                            _countdown.SetProgress(0f);
+                            _countdown.Visibility = ViewStates.Visible;
+                        }
                         Haptic();
                         ScheduleCountdownHaptics();
                         _handler.PostDelayed(_triggerExit, _holdMillis);
+                        _handler.Post(_progressTick);
                         e.Handled = true;
                         break;
 
@@ -89,6 +128,16 @@ public class MainActivity : Activity
                 }
             };
         }
+
+        // Long-press the HR text to open Settings
+        if (_hrText != null)
+        {
+            _hrText.SetOnLongClickListener(new LongClickListener(() =>
+            {
+                StartActivity(new Intent(this, typeof(SettingsActivity)));
+                return true;
+            }));
+        }
     }
 
     private void CancelHold()
@@ -96,14 +145,17 @@ public class MainActivity : Activity
         if (!_holding) return;
         _holding = false;
         _handler.RemoveCallbacks(_triggerExit);
+        _handler.RemoveCallbacks(_progressTick);
         _handler.RemoveCallbacksAndMessages(null);
+        if (_countdown != null) _countdown.Visibility = ViewStates.Gone;
         Toast.MakeText(this, "Hold cancelled", ToastLength.Short).Show();
     }
 
     private void ScheduleCountdownHaptics()
     {
-        // Optional: short tick each second
-        for (int i = 1; i <= 9; i++)
+        // tick once per second until the last second
+        int seconds = (int)(_holdMillis / 1000L);
+        for (int i = 1; i < seconds; i++)
         {
             int delay = i * 1000;
             _handler.PostDelayed(new Java.Lang.Runnable(() =>
@@ -139,22 +191,17 @@ public class MainActivity : Activity
 #pragma warning restore CA1416
             }
         }
-        catch { /* best-effort */ }
+        catch { /* best-effort only */ }
     }
 
     private void ForceCloseApp()
     {
         try
         {
-            // Stop service cleanly
+            // Stop the foreground service cleanly
             StopService(new Intent(this, typeof(HeartRateService)));
-
-            // Close activity/task
+            // Close this task so the app is gone from recents
             FinishAndRemoveTask();
-
-            // Optional hard kill (not recommended):
-            // Android.OS.Process.KillProcess(Android.OS.Process.MyPid());
-            // Environment.Exit(0);
         }
         catch (SysException ex)
         {
@@ -166,14 +213,36 @@ public class MainActivity : Activity
     {
         var serviceIntent = new Intent(this, typeof(HeartRateService));
         if (Build.VERSION.SdkInt >= BuildVersionCodes.O)
-        {
             StartForegroundService(serviceIntent);
-        }
         else
-        {
             StartService(serviceIntent);
-        }
     }
+
+    // ===== Preferences =====
+
+    private void LoadPrefs()
+    {
+        var sp = GetSharedPreferences(PREFS, FileCreationMode.Private);
+
+        // hold_enabled (default true) – read but behavior handled at touch-time
+        bool enabled = sp.GetBoolean(PREF_HOLD_ENABLED, true);
+
+        // hold_seconds stored as OFFSET 0..10; default offset 5 -> 10 seconds
+        int offset = sp.GetInt(PREF_HOLD_SECONDS, 5);
+        if (offset < 0) offset = 0;
+        if (offset > 10) offset = 10;
+
+        int seconds = 5 + offset; // map 0..10 -> 5..15
+        _holdMillis = seconds * 1000L;
+    }
+
+    private bool IsHoldEnabled()
+    {
+        var sp = GetSharedPreferences(PREFS, FileCreationMode.Private);
+        return sp.GetBoolean(PREF_HOLD_ENABLED, true);
+    }
+
+    // ===== Permissions & Receivers =====
 
     public override void OnRequestPermissionsResult(int requestCode, string[] permissions, Permission[] grantResults)
     {
@@ -193,20 +262,17 @@ public class MainActivity : Activity
     {
         base.OnResume();
 
-        // Replace '??=' (preview) with classic null-check:
+        // Reload prefs in case user changed settings
+        LoadPrefs();
+
         if (_updateReceiver == null)
             _updateReceiver = new HrUpdateReceiver(_hrText);
 
         var filter = new IntentFilter(HeartRateService.ACTION_UPDATE);
-
         if (Build.VERSION.SdkInt >= BuildVersionCodes.Tiramisu)
-        {
             RegisterReceiver(_updateReceiver, filter, ReceiverFlags.NotExported);
-        }
         else
-        {
             RegisterReceiver(_updateReceiver, filter);
-        }
     }
 
     protected override void OnPause()
@@ -232,20 +298,28 @@ public class MainActivity : Activity
     {
         private readonly TextView? _targetView;
 
-        public HrUpdateReceiver(TextView? targetView) => _targetView = targetView;
+        public HrUpdateReceiver(TextView? targetView)
+        {
+            _targetView = targetView;
+        }
 
         public override void OnReceive(Context? context, Intent? intent)
         {
             if (intent?.Action == HeartRateService.ACTION_UPDATE)
             {
                 int hr = intent.GetIntExtra("hr", 0);
-                SysDebug.WriteLine($"HrUpdateReceiver: Received HR update: {hr} bpm");
-
                 if (_targetView != null && hr > 0)
                 {
                     _targetView.Text = $"{hr} bpm";
                 }
             }
         }
+    }
+
+    private sealed class LongClickListener : Java.Lang.Object, View.IOnLongClickListener
+    {
+        private readonly Func<bool> _action;
+        public LongClickListener(Func<bool> action) => _action = action;
+        public bool OnLongClick(View? v) => _action();
     }
 }

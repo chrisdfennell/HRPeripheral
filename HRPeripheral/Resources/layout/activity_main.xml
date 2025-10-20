@@ -13,7 +13,14 @@
       android:textStyle="bold"
       android:layout_gravity="center" />
 
-  <!-- NEW: press & hold overlay -->
+  <!-- NEW: visible only while holding -->
+  <hrperipheral.views.HoldCountdownView
+      android:id="@+id/holdCountdown"
+      android:layout_width="match_parent"
+      android:layout_height="match_parent"
+      android:layout_gravity="center" />
+
+  <!-- Existing: full-screen invisible touch layer -->
   <View
       android:id="@+id/exitHoldOverlay"
       android:layout_width="match_parent"
@@ -21,5 +28,4 @@
       android:clickable="true"
       android:focusable="false"
       android:background="@android:color/transparent" />
-
 </FrameLayout>
