@@ -13,14 +13,13 @@
       android:textStyle="bold"
       android:layout_gravity="center" />
 
-  <!-- NEW: visible only while holding -->
   <hrperipheral.views.HoldCountdownView
       android:id="@+id/holdCountdown"
       android:layout_width="match_parent"
       android:layout_height="match_parent"
       android:layout_gravity="center" />
 
-  <!-- Existing: full-screen invisible touch layer -->
+  <!-- Full-screen overlay (kept BEFORE the button so the button sits on top) -->
   <View
       android:id="@+id/exitHoldOverlay"
       android:layout_width="match_parent"
@@ -28,4 +27,18 @@
       android:clickable="true"
       android:focusable="false"
       android:background="@android:color/transparent" />
+
+  <!-- SETTINGS BUTTON LAST = ON TOP -->
+  <ImageButton
+      android:id="@+id/btnSettings"
+      android:layout_width="48dp"
+      android:layout_height="48dp"
+      android:layout_gravity="center_horizontal|top"
+      android:layout_marginTop="16dp"
+      android:background="@android:color/transparent"
+      android:contentDescription="Settings"
+      android:src="@drawable/ic_settings_gear"
+      android:padding="4dp"
+      android:scaleType="centerInside"
+      android:elevation="8dp" />
 </FrameLayout>

@@ -29,6 +29,7 @@ public class MainActivity : Activity
     private const string PREF_HOLD_SECONDS = "hold_seconds"; // stored as offset 0..10 (maps to 5..15s)
 
     private TextView? _hrText;
+    private ImageButton? _btnSettings;
     private HrUpdateReceiver? _updateReceiver;
 
     // Press & hold to exit
@@ -36,10 +37,14 @@ public class MainActivity : Activity
     private HoldCountdownView? _countdown;
     private long _holdStart;
     private bool _holding;
-    private long _holdMillis = 10_000L; // will be overwritten by prefs
+    private long _holdMillis = 10_000L; // overwritten by prefs
     private readonly Handler _handler = new Handler(Looper.MainLooper);
     private Java.Lang.IRunnable? _triggerExit;
     private Java.Lang.IRunnable? _progressTick;
+    private Java.Lang.IRunnable? _startCountdown; // starts after the pre-hold delay
+
+    // Pre-hold delay so taps don’t trigger the countdown (1s by default)
+    private const int PRE_HOLD_DELAY_MS = 1000;
 
     protected override void OnCreate(Bundle? savedInstanceState)
     {
@@ -56,6 +61,21 @@ public class MainActivity : Activity
         _hrText = FindViewById<TextView>(Resource.Id.hr_value);
         _exitOverlay = FindViewById(Resource.Id.exitHoldOverlay);
         _countdown = FindViewById<HoldCountdownView>(Resource.Id.holdCountdown);
+        _btnSettings = FindViewById<ImageButton>(Resource.Id.btnSettings);
+
+        // Ensure the gear is ABOVE the overlay (z-order + elevation)
+        _btnSettings?.Post(() =>
+        {
+            _btnSettings.BringToFront();
+            if (Build.VERSION.SdkInt >= BuildVersionCodes.Lollipop)
+                _btnSettings.Elevation = 8f;
+        });
+
+        // Settings button click
+        _btnSettings?.SetOnClickListener(new ClickListener(() =>
+        {
+            StartActivity(new Intent(this, typeof(SettingsActivity)));
+        }));
 
         // Start service (after permissions)
         if (!BlePermissions.HasAll(this))
@@ -89,11 +109,42 @@ public class MainActivity : Activity
             }
         });
 
+        // Deferred start of countdown (after PRE_HOLD_DELAY_MS)
+        _startCountdown = new Java.Lang.Runnable(() =>
+        {
+            if (!_holding) return; // user let go early
+
+            // Visuals + feedback now that the long-press is confirmed
+            _holdStart = Java.Lang.JavaSystem.CurrentTimeMillis();
+            if (_countdown != null)
+            {
+                _countdown.SetProgress(0f);
+                _countdown.Visibility = ViewStates.Visible;
+            }
+            // Fade settings while holding (optional polish)
+            _btnSettings?.Animate()?.Alpha(0f)?.SetDuration(150)?.Start();
+
+            Haptic();
+            ScheduleCountdownHaptics();
+            _handler.PostDelayed(_triggerExit, _holdMillis);
+            _handler.Post(_progressTick);
+        });
+
         // Touch handling for the full-screen overlay
         if (_exitOverlay != null)
         {
             _exitOverlay.Touch += (s, e) =>
             {
+                // If touch begins on the gear, let the gear handle it
+                if (e.Event.ActionMasked == MotionEventActions.Down && _btnSettings != null)
+                {
+                    if (IsTouchInsideView(_btnSettings, e.Event))
+                    {
+                        e.Handled = false; // pass to button
+                        return;
+                    }
+                }
+
                 switch (e.Event.ActionMasked)
                 {
                     case MotionEventActions.Down:
@@ -102,17 +153,9 @@ public class MainActivity : Activity
                             e.Handled = false;
                             return;
                         }
-                        _holdStart = Java.Lang.JavaSystem.CurrentTimeMillis();
                         _holding = true;
-                        if (_countdown != null)
-                        {
-                            _countdown.SetProgress(0f);
-                            _countdown.Visibility = ViewStates.Visible;
-                        }
-                        Haptic();
-                        ScheduleCountdownHaptics();
-                        _handler.PostDelayed(_triggerExit, _holdMillis);
-                        _handler.Post(_progressTick);
+                        // Require PRE_HOLD_DELAY_MS of continuous hold before showing countdown
+                        _handler.PostDelayed(_startCountdown, PRE_HOLD_DELAY_MS);
                         e.Handled = true;
                         break;
 
@@ -129,7 +172,7 @@ public class MainActivity : Activity
             };
         }
 
-        // Long-press the HR text to open Settings
+        // Long-press the HR text to open Settings (secondary path)
         if (_hrText != null)
         {
             _hrText.SetOnLongClickListener(new LongClickListener(() =>
@@ -140,14 +183,38 @@ public class MainActivity : Activity
         }
     }
 
+    // Optional overflow menu path to Settings
+    public override bool OnCreateOptionsMenu(IMenu menu)
+    {
+        menu.Add(0, 1001, 0, "Settings");
+        return true;
+    }
+    public override bool OnOptionsItemSelected(IMenuItem item)
+    {
+        if (item.ItemId == 1001)
+        {
+            StartActivity(new Intent(this, typeof(SettingsActivity)));
+            return true;
+        }
+        return base.OnOptionsItemSelected(item);
+    }
+
     private void CancelHold()
     {
+        // Always clear any pending delayed start
+        _handler.RemoveCallbacks(_startCountdown);
+
         if (!_holding) return;
+
         _holding = false;
+
+        // Cancel anything scheduled
         _handler.RemoveCallbacks(_triggerExit);
         _handler.RemoveCallbacks(_progressTick);
-        _handler.RemoveCallbacksAndMessages(null);
+
         if (_countdown != null) _countdown.Visibility = ViewStates.Gone;
+        _btnSettings?.Animate()?.Alpha(1f)?.SetDuration(150)?.Start();
+
         Toast.MakeText(this, "Hold cancelled", ToastLength.Short).Show();
     }
 
@@ -225,7 +292,7 @@ public class MainActivity : Activity
         var sp = GetSharedPreferences(PREFS, FileCreationMode.Private);
 
         // hold_enabled (default true) – read but behavior handled at touch-time
-        bool enabled = sp.GetBoolean(PREF_HOLD_ENABLED, true);
+        bool _ = sp.GetBoolean(PREF_HOLD_ENABLED, true);
 
         // hold_seconds stored as OFFSET 0..10; default offset 5 -> 10 seconds
         int offset = sp.GetInt(PREF_HOLD_SECONDS, 5);
@@ -321,5 +388,31 @@ public class MainActivity : Activity
         private readonly Func<bool> _action;
         public LongClickListener(Func<bool> action) => _action = action;
         public bool OnLongClick(View? v) => _action();
+    }
+
+    private sealed class ClickListener : Java.Lang.Object, View.IOnClickListener
+    {
+        private readonly Action _action;
+        public ClickListener(Action action) => _action = action;
+        public void OnClick(View? v) => _action();
+    }
+
+    // ===== Helpers =====
+
+    /// <summary>
+    /// Returns true if the MotionEvent DOWN occurred inside the given view.
+    /// Uses raw screen coordinates to handle overlays correctly.
+    /// </summary>
+    private static bool IsTouchInsideView(View v, MotionEvent e)
+    {
+        if (v.Visibility != ViewStates.Visible) return false;
+        int[] loc = new int[2];
+        v.GetLocationOnScreen(loc);
+        var left = loc[0];
+        var top = loc[1];
+        var right = left + v.Width;
+        var bottom = top + v.Height;
+        float x = e.RawX, y = e.RawY;
+        return x >= left && x <= right && y >= top && y <= bottom;
     }
 }
