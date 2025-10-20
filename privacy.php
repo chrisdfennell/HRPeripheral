@@ -66,7 +66,7 @@
 
             <h2 class="text-2xl font-semibold text-gray-900 mt-8 mb-3">Contact Us</h2>
             <p>
-                If you have any questions or suggestions about our Privacy Policy, do not hesitate to contact us at <a href="mailto:privacy@example.com" class="text-blue-600 hover:underline">privacy@example.com</a>.
+                If you have any questions or suggestions about our Privacy Policy, do not hesitate to contact us at <a href="mailto:privacy@chrisdfennell.com" class="text-blue-600 hover:underline">privacy@chrisdfennell.com</a>.
             </p>
         </div>
     </div>

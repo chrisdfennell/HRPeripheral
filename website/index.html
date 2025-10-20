@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HR Peripheral for Wear OS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .gradient-bg {
+            background: linear-gradient(135deg, #1e3a8a, #3b82f6);
+        }
+        .glow {
+            box-shadow: 0 0 25px rgba(59, 130, 246, 0.5);
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-white">
+
+    <!-- Header -->
+    <header class="gradient-bg text-white shadow-lg">
+        <div class="container mx-auto px-6 py-12 text-center">
+            <h1 class="text-4xl md:text-5xl font-extrabold leading-tight">HR Peripheral for Wear OS</h1>
+            <p class="mt-4 text-lg md:text-xl text-blue-200 max-w-2xl mx-auto">Turn your Wear OS watch into a Bluetooth heart rate monitor for your fitness equipment.</p>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-6 py-16">
+
+        <!-- App Showcase Section -->
+        <section class="flex flex-col md:flex-row items-center gap-12">
+            <!-- App Screenshot -->
+            <div class="md:w-1/2">
+                <img src="images/screenshot.png" alt="HR Peripheral App Screenshot" class="rounded-3xl shadow-2xl glow w-full max-w-sm mx-auto">
+                 <!-- TODO: Replace the placeholder above with a real screenshot of your app! -->
+            </div>
+            <!-- Features & Download -->
+            <div class="md:w-1/2 text-center md:text-left">
+                <h2 class="text-3xl font-bold text-blue-400">Broadcast Your Heart Rate.</h2>
+                <p class="mt-4 text-slate-300">
+                    Your gym equipment, like treadmills and stationary bikes, can display your heart rate, but only if your watch can broadcast it. HR Peripheral solves this problem by turning your watch into a standard Bluetooth heart rate device that any compatible equipment can connect to.
+                </p>
+
+                <!-- Feature List -->
+                <ul class="mt-8 space-y-3 text-left inline-block">
+                    <li class="flex items-center">
+                        <svg class="w-6 h-6 text-blue-500 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                        <span>Live heart rate broadcasting over Bluetooth LE.</span>
+                    </li>
+                    <li class="flex items-center">
+                        <svg class="w-6 h-6 text-blue-500 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                        <span>Compatible with fitness equipment (treadmills, bikes, etc.).</span>
+                    </li>
+                    <li class="flex items-center">
+                        <svg class="w-6 h-6 text-blue-500 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                        <span>Clean, battery-friendly interface with a live graph.</span>
+                    </li>
+                     <li class="flex items-center">
+                        <svg class="w-6 h-6 text-blue-500 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                        <span>Runs as a foreground service to stay connected.</span>
+                    </li>
+                </ul>
+
+                <!-- Download & Source Buttons -->
+                <div class="mt-10 flex items-center justify-center md:justify-start gap-4">
+                    <!-- Google Play Button -->
+                    <!-- TODO: Replace the "#" with your actual Google Play store link when it's live! -->
+                    <a href="#" class="inline-block transition-transform hover:scale-105">
+                        <img src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" alt="Get it on Google Play" class="h-16">
+                    </a>
+                    <!-- GitHub Link -->
+                    <a href="https://github.com/chrisdfennell/HRPeripheral" target="_blank" rel="noopener noreferrer" class="h-16 flex items-center gap-3 px-4 bg-slate-700 rounded-lg transition-all hover:bg-slate-600 hover:scale-105" title="View on GitHub">
+                        <svg class="w-8 h-8 text-white" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.26.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/>
+                        </svg>
+                        <span class="text-xl font-bold text-purple-400">GitHub</span>
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Tester Recruitment Section -->
+        <section class="mt-24 bg-slate-800 rounded-2xl p-8 md:p-12 text-center shadow-lg">
+            <h2 class="text-3xl font-bold text-blue-400">Become a Tester!</h2>
+            <p class="mt-4 max-w-xl mx-auto text-slate-300">
+                To get this app released, I need at least 15 people to join the closed test. If you have a Wear OS watch and want to help, please follow the steps below. Your feedback is invaluable!
+            </p>
+
+            <div class="mt-8 text-left max-w-lg mx-auto space-y-4">
+                <div class="flex items-start">
+                    <div class="text-blue-500 font-bold text-2xl mr-4">1.</div>
+                    <div>
+                        <h3 class="font-semibold">Join the Google Group</h3>
+                        <p class="text-slate-400">You need to join our private Google Group to be eligible. This is a requirement from Google to manage testers.
+                            <br>
+                             <!-- TODO: Replace "#" with your Google Group join link -->
+                            <a href="#" class="text-blue-400 hover:underline font-semibold">Click here to join the testing group.</a>
+                        </p>
+                    </div>
+                </div>
+                <div class="flex items-start">
+                    <div class="text-blue-500 font-bold text-2xl mr-4">2.</div>
+                    <div>
+                        <h3 class="font-semibold">Become a Tester on Google Play</h3>
+                        <p class="text-slate-400">After joining the group, click the link below to accept the testing invitation on Google Play.
+                            <br>
+                             <!-- TODO: Replace "#" with your "Join on the web" link from the Play Console -->
+                            <a href="#" class="text-blue-400 hover:underline font-semibold">Click here to become a tester.</a>
+                        </p>
+                    </div>
+                </div>
+                 <div class="flex items-start">
+                    <div class="text-blue-500 font-bold text-2xl mr-4">3.</div>
+                    <div>
+                        <h3 class="font-semibold">Install the App</h3>
+                        <p class="text-slate-400">Once you've accepted, you can download the app directly from the Google Play Store on your watch or from your browser.</p>
+                    </div>
+                </div>
+            </div>
+             <p class="mt-8 text-sm text-slate-500">Thank you for your support!</p>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="text-center py-8 text-slate-500 text-sm">
+        <p>&copy; 2025 Christopher Fennell. All rights reserved.</p>
+    </footer>
+
+</body>
+</html>
