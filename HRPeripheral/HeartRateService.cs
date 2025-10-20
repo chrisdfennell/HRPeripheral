@@ -36,13 +36,17 @@ public class HeartRateService : Service, ISensorEventListener
     private const bool OFFBODY_ONE_IS_ON_WRIST = true;
 
     // Feature flag: turn off to disable auto-pause logic entirely
-    private const bool AUTO_PAUSE = true;
+    private const bool AUTO_PAUSE = false;
 
     // --- Sensors & system handles ---
     private SensorManager? _sm;
     private Sensor? _hrSensor;
     private Sensor? _offBody; // TYPE_LOW_LATENCY_OFFBODY_DETECT (int 34) if present
     private Sensor? _accel;   // accelerometer for motion-based fallback
+
+    // --- Logging verbosity flags ---
+    private const bool LOG_VERBOSE_SENSORS = false; // set true only when you want raw sensor spam
+    private const bool LOG_ACCEL = false;           // set true only when debugging accel logic
 
     // --- BLE peripheral wrapper and state ---
     private BlePeripheral? _ble;
@@ -275,16 +279,19 @@ public class HeartRateService : Service, ISensorEventListener
         if (e?.Sensor == null) return;
 
         // Verbose event dump (safe-guarded)
-        try
+        if (LOG_VERBOSE_SENSORS)
         {
-            var sType = (int)e.Sensor.Type;
-            var name = e.Sensor.Name ?? "(noname)";
-            var vendor = e.Sensor.Vendor ?? "(novendor)";
-            var values = e.Values;
-            string valStr = values == null ? "null" : $"[{string.Join(", ", values)}]";
-            LogD($"OnSensorChanged: type={sType} ({e.Sensor.Type}) name={name} vendor={vendor} values={valStr}");
+            try
+            {
+                var sType = (int)e.Sensor.Type;
+                var name = e.Sensor.Name ?? "(noname)";
+                var vendor = e.Sensor.Vendor ?? "(novendor)";
+                var values = e.Values;
+                string valStr = values == null ? "null" : $"[{string.Join(", ", values)}]";
+                LogD($"OnSensorChanged: type={sType} ({e.Sensor.Type}) name={name} vendor={vendor} values={valStr}");
+            }
+            catch { /* ignore */ }
         }
-        catch { /* ignore */ }
 
         if (AUTO_PAUSE)
         {
@@ -303,6 +310,7 @@ public class HeartRateService : Service, ISensorEventListener
             }
 
             // --- Accelerometer fallback path (motion heuristic) ---
+            // Accelerometer always active as an escape hatch
             if (e.Sensor.Type == SensorType.Accelerometer)
             {
                 if (e.Values == null || e.Values.Count < 3) return;
@@ -311,9 +319,10 @@ public class HeartRateService : Service, ISensorEventListener
                 double mag = Math.Sqrt(ax * ax + ay * ay + az * az);
                 long now = Java.Lang.JavaSystem.CurrentTimeMillis();
 
-                LogD($"Accel: ax={ax:F3} ay={ay:F3} az={az:F3} |mag|={mag:F3} gdiff={Math.Abs(mag - 9.80665):F3} paused={_paused}");
+                if (LOG_ACCEL)
+                    LogD($"Accel: ax={ax:F3} ay={ay:F3} az={az:F3} |mag|={mag:F3} gdiff={Math.Abs(mag - 9.80665):F3} paused={_paused}");
 
-                // use 9.80665 m/s^2 as g; significant deviation => motion
+                // (keep the pause/resume logic exactly as-is)
                 if (Math.Abs(mag - 9.80665) > MotionEps)
                 {
                     _lastMotionMs = now;
@@ -393,14 +402,6 @@ public class HeartRateService : Service, ISensorEventListener
                 {
                     _sm?.UnregisterListener(this, _hrSensor);
                     LogI("HR sensor unregistered (paused)");
-                }
-
-                // Pause BLE advertising to save power
-                if (_advRunning)
-                {
-                    _ble?.StopAdvertising();
-                    _advRunning = false;
-                    LogI("BLE advertising stopped (paused)");
                 }
 
                 UpdateNotificationText($"Paused ({reason})");
