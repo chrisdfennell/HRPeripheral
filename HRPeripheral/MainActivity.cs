@@ -29,16 +29,13 @@ public class MainActivity : Activity
     private const string PREF_HOLD_ENABLED = "hold_enabled";
     private const string PREF_HOLD_SECONDS = "hold_seconds"; // stored as offset 0..10 (maps to 5..15s)
 
-    // Graph
-    private HRPeripheral.Views.HrGraphView? _hrGraph;
-    private readonly System.Collections.Generic.Queue<int> _hrHistory = new();
-    private const int MaxPoints = 120; // last ~2 minutes @ ~1 Hz
+    // Graph (full-screen minus top button)
+    private HrGraphView? _hrGraph;
 
-    private TextView? _hrText;
     private ImageButton? _btnSettings;
     private HrUpdateReceiver? _updateReceiver;
 
-    // Press & hold to exit
+    // Press & hold to exit (with visible HoldCountdownView)
     private View? _exitOverlay;
     private HoldCountdownView? _countdown;
     private long _holdStart;
@@ -64,8 +61,7 @@ public class MainActivity : Activity
         LoadPrefs();
 
         // Views
-        _hrText = FindViewById<TextView>(Resource.Id.hr_value);
-        _hrGraph = FindViewById<HRPeripheral.Views.HrGraphView>(Resource.Id.hr_graph);
+        _hrGraph = FindViewById<HrGraphView>(Resource.Id.hr_graph);
         _exitOverlay = FindViewById(Resource.Id.exitHoldOverlay);
         _countdown = FindViewById<HoldCountdownView>(Resource.Id.holdCountdown);
         _btnSettings = FindViewById<ImageButton>(Resource.Id.btnSettings);
@@ -177,16 +173,6 @@ public class MainActivity : Activity
                         break;
                 }
             };
-        }
-
-        // Long-press the HR text to open Settings (secondary path)
-        if (_hrText != null)
-        {
-            _hrText.SetOnLongClickListener(new LongClickListener(() =>
-            {
-                StartActivity(new Intent(this, typeof(SettingsActivity)));
-                return true;
-            }));
         }
     }
 
@@ -381,32 +367,14 @@ public class MainActivity : Activity
             int hr = intent.GetIntExtra("hr", 0);
             bool paused = intent.GetBooleanExtra("paused", false);
 
-            // Text
-            if (_host._hrText != null)
-            {
-                if (hr > 0)
-                    _host._hrText.Text = $"{hr} bpm";
-                // Optional: show paused hint even if we don't have a reading yet
-                if (paused && hr <= 0)
-                    _host._hrText.Text = "Paused";
-            }
-
             // Graph – use Push for your view
             if (hr > 0)
                 _host._hrGraph?.Push(hr);
 
             // Dim/undim UI based on pause state
             float alpha = paused ? 0.5f : 1f;
-            _host._hrText?.Animate()?.Alpha(alpha)?.SetDuration(150)?.Start();
             _host._hrGraph?.Animate()?.Alpha(alpha)?.SetDuration(150)?.Start();
         }
-    }
-
-    private sealed class LongClickListener : Java.Lang.Object, View.IOnLongClickListener
-    {
-        private readonly Func<bool> _action;
-        public LongClickListener(Func<bool> action) => _action = action;
-        public bool OnLongClick(View? v) => _action();
     }
 
     private sealed class ClickListener : Java.Lang.Object, View.IOnClickListener

@@ -1,79 +1,47 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!--
-  HRPeripheral main layout.
-  Top-level FrameLayout for simple stacking and z-ordering.
-  contentGroup holds all movable content; the gear button stays on top.
--->
+<!-- Fullscreen graph with settings gear; adjusted margins for round watch screens -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:foregroundGravity="center"
     android:keepScreenOn="true">
 
-  <!-- contentGroup
-         Holds HR text, graph, countdown, and the touch overlay.
-         paddingBottom nudges the whole group upward a bit. -->
-  <FrameLayout
-      android:id="@+id/contentGroup"
-      android:layout_width="match_parent"
-      android:layout_height="match_parent"
-      android:paddingBottom="24dp">
-
-    <!-- Heart rate text centered on screen -->
-    <TextView
-        android:id="@+id/hr_value"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="-- bpm"
-        android:textSize="28sp"
-        android:textStyle="bold"
-        android:layout_gravity="center" />
-
-    <!-- HR strip graph -->
+    <!-- Graph fills most of the screen but leaves breathing room top/bottom/sides -->
     <HRPeripheral.Views.HrGraphView
         android:id="@+id/hr_graph"
         android:layout_width="match_parent"
-        android:layout_height="56dp"
-        android:layout_gravity="center_horizontal|bottom"
-        android:layout_marginStart="24dp"
-        android:layout_marginEnd="24dp"
-        android:paddingStart="8dp"
-        android:paddingEnd="8dp"
-        android:background="@android:color/transparent" />
+        android:layout_height="match_parent"
+        android:layout_gravity="center"
+        android:layout_marginTop="72dp"
+        android:layout_marginBottom="36dp"
+        android:layout_marginStart="20dp"
+        android:layout_marginEnd="20dp" />
 
-    <!-- Full screen countdown ring shown during long press to exit -->
-    <HRPeripheral.Views.HoldCountdownView
+    <!-- Hold-to-exit countdown ring -->
+    <hrperipheral.views.HoldCountdownView
         android:id="@+id/holdCountdown"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_gravity="center" />
 
-    <!-- Transparent touch overlay to detect long press to exit
-             Placed before the settings button so the button sits on top -->
+    <!-- Touch overlay for long press to exit -->
     <View
         android:id="@+id/exitHoldOverlay"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:clickable="true"
-        android:longClickable="true"
-        android:focusable="true"
-        android:background="@android:color/transparent" />
+        android:focusable="false" />
 
-  </FrameLayout>
-
-  <!-- Settings button
-         Declared last so it appears above everything else -->
-  <ImageButton
-      android:id="@+id/btnSettings"
-      android:layout_width="48dp"
-      android:layout_height="48dp"
-      android:layout_gravity="center_horizontal|top"
-      android:layout_marginTop="16dp"
-      android:background="@android:color/transparent"
-      android:contentDescription="Settings"
-      android:src="@drawable/ic_settings_gear"
-      android:padding="4dp"
-      android:scaleType="centerInside"
-      android:elevation="8dp" />
+    <!-- Settings gear button (on top) -->
+    <ImageButton
+        android:id="@+id/btnSettings"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_gravity="center_horizontal|top"
+        android:layout_marginTop="12dp"
+        android:background="@android:color/transparent"
+        android:contentDescription="Settings"
+        android:src="@drawable/ic_settings_gear"
+        android:padding="4dp"
+        android:scaleType="centerInside"
+        android:elevation="8dp" />
 
 </FrameLayout>
