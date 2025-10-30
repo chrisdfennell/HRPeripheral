@@ -1,0 +1,46 @@
+13:12:41  Found APK: com.fennell.hrperipheral-Signed.apk
+
+13:12:42  Uninstalling previous version...
+
+13:27:03  Settings loaded.
+
+13:27:03  Welcome! Please verify settings.
+ 
+13:27:07  Building...
+
+13:29:31  Settings loaded.
+
+13:29:31  Welcome! Please verify settings.
+
+13:29:35  Building...
+
+13:30:57  ERROR opening log file: Exception calling "Start" with "1" argument(s): "An error occurred trying to start process 'C:\Users\Infan\OneDrive\Programming\C#\HRPeripheral\HRPeripheral\builddeploy.log.txt' with working directory 'C:\Users\Infan\OneDrive\Programming\C#\HRPeripheral\HRPeripheral'. The specified executable is not a valid application for this OS platform."
+
+13:31:09  Found: com.fennell.hrperipheral-Signed.apk
+
+13:31:10  Installing...
+
+13:33:22  Settings loaded.
+
+13:33:22  Welcome! Please verify settings.
+
+13:33:33  Building...
+
+13:36:29  Settings loaded.
+
+13:36:29  Welcome! Please verify settings.
+
+13:36:31  Building...
+
+13:38:28  Settings loaded.
+
+13:38:28  Welcome! Please verify settings.
+
+13:38:30  Building...
+
+13:40:27  Settings loaded.
+
+13:40:27  Welcome! Please verify settings.
+
+13:40:30  Building...
+
