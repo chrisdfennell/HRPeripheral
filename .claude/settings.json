@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(\"C:/android-sdk/cmdline-tools/latest/bin/sdkmanager.bat\" --install \"platforms;android-36\" --sdk_root=\"C:/android-sdk\")"
+    ]
+  }
+}

@@ -1,0 +1,6 @@
+<Project>
+  <PropertyGroup>
+    <MSBuildEnableWorkloadResolver>true</MSBuildEnableWorkloadResolver>
+    <AndroidSdkDirectory>C:\android-sdk</AndroidSdkDirectory>
+  </PropertyGroup>
+</Project>

@@ -1,0 +1,229 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+  <LinearLayout
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:orientation="vertical"
+      android:padding="16dp">
+
+    <!-- ===== title ===== -->
+    <TextView
+        android:id="@+id/txtTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Settings"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:paddingBottom="12dp" />
+
+    <!-- ===== hold-to-exit toggle ===== -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingTop="8dp"
+        android:paddingBottom="8dp">
+
+      <TextView
+          android:layout_width="0dp"
+          android:layout_height="wrap_content"
+          android:layout_weight="1"
+          android:text="Press &amp; Hold to Exit"
+          android:textSize="16sp" />
+
+      <Switch
+          android:id="@+id/switchHold"
+          android:layout_width="wrap_content"
+          android:layout_height="wrap_content" />
+    </LinearLayout>
+
+    <!-- ===== hold duration ===== -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Hold Duration"
+        android:textSize="16sp"
+        android:paddingTop="12dp"/>
+
+    <TextView
+        android:id="@+id/txtHoldValue"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="10 seconds"
+        android:paddingTop="4dp"
+        android:paddingBottom="4dp" />
+
+    <SeekBar
+        android:id="@+id/seekHoldSeconds"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:max="10" />
+
+    <!-- ===== auto-pause toggle ===== -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingTop="12dp"
+        android:paddingBottom="4dp">
+
+      <TextView
+          android:layout_width="0dp"
+          android:layout_height="wrap_content"
+          android:layout_weight="1"
+          android:text="Auto-Pause (off-wrist)"
+          android:textSize="16sp" />
+
+      <Switch
+          android:id="@+id/switchAutoPause"
+          android:layout_width="wrap_content"
+          android:layout_height="wrap_content" />
+    </LinearLayout>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Takes effect on next app restart"
+        android:textSize="12sp"
+        android:textColor="#888888"
+        android:paddingBottom="8dp" />
+
+    <!-- ===== divider before calorie profile ===== -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#33000000"
+        android:layout_marginTop="16dp"
+        android:layout_marginBottom="12dp" />
+
+    <!-- ===== calorie profile ===== -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Calorie Profile"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:paddingBottom="4dp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Takes effect on next app restart"
+        android:textSize="12sp"
+        android:textColor="#888888"
+        android:paddingBottom="8dp" />
+
+    <!-- Male / Female -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingBottom="8dp">
+
+      <TextView
+          android:layout_width="0dp"
+          android:layout_height="wrap_content"
+          android:layout_weight="1"
+          android:text="Male"
+          android:textSize="16sp" />
+
+      <Switch
+          android:id="@+id/switchCalMale"
+          android:layout_width="wrap_content"
+          android:layout_height="wrap_content" />
+    </LinearLayout>
+
+    <!-- Weight -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Weight (kg)"
+        android:textSize="16sp"
+        android:paddingTop="4dp" />
+
+    <TextView
+        android:id="@+id/txtWeightValue"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="75 kg"
+        android:paddingTop="2dp"
+        android:paddingBottom="2dp" />
+
+    <SeekBar
+        android:id="@+id/seekWeight"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:max="110"
+        android:paddingBottom="8dp" />
+
+    <!-- Age -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Age"
+        android:textSize="16sp"
+        android:paddingTop="4dp" />
+
+    <TextView
+        android:id="@+id/txtAgeValue"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="35"
+        android:paddingTop="2dp"
+        android:paddingBottom="2dp" />
+
+    <SeekBar
+        android:id="@+id/seekAge"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:max="65"
+        android:paddingBottom="8dp" />
+
+    <!-- ===== divider ===== -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#33000000"
+        android:layout_marginTop="16dp"
+        android:layout_marginBottom="12dp" />
+
+    <!-- ===== bluetooth section ===== -->
+    <TextView
+        android:id="@+id/txtBleHeader"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Bluetooth"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:paddingBottom="8dp" />
+
+    <Button
+        android:id="@+id/btn_forget_all"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Forget all devices" />
+
+    <TextView
+        android:id="@+id/txtKnownDevices"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Known devices"
+        android:textSize="16sp"
+        android:paddingTop="16dp"
+        android:paddingBottom="8dp" />
+
+    <!-- container we’ll populate with rows:  [ address | Forget ] -->
+    <LinearLayout
+        android:id="@+id/container_known_devices"
+        android:orientation="vertical"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+
+  </LinearLayout>
+</ScrollView>

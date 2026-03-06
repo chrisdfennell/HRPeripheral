@@ -1,0 +1,49 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0-android</TargetFramework>
+    <RuntimeIdentifiers>android-arm64;android-arm;android-x64</RuntimeIdentifiers>
+    <SupportedOSPlatformVersion>23</SupportedOSPlatformVersion>
+    <OutputType>Exe</OutputType>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <ApplicationId>com.fennell.hrperipheral</ApplicationId>
+    <AndroidStoreUncompressedFileExtensions>.so</AndroidStoreUncompressedFileExtensions>
+    <EmbedAssembliesIntoApk>true</EmbedAssembliesIntoApk>
+    <TrimMode>partial</TrimMode>
+    <AndroidUseLatestPlatformSdk>true</AndroidUseLatestPlatformSdk>
+  </PropertyGroup>
+
+  <!--
+    RELEASE BUILD SETTINGS:
+    This is a separate, conditional PropertyGroup that only applies when building in the 'Release' configuration.
+  -->
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <AndroidPackageFormat>aab</AndroidPackageFormat>
+    <AndroidUseSharedRuntime>false</AndroidUseSharedRuntime>
+    <RunAOTCompilation>false</RunAOTCompilation>
+    <AndroidKeyStore>false</AndroidKeyStore>
+    <AndroidSigningKeyAlias></AndroidSigningKeyAlias>
+    <AndroidSigningKeyPass></AndroidSigningKeyPass>
+    <AndroidSigningStorePass></AndroidSigningStorePass>
+    <DebugSymbols>false</DebugSymbols>
+    <DebugType>None</DebugType>
+    <Debuggable>false</Debuggable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <AndroidResource Include="Resources\drawable\ic_launcher_background.xml" />
+    <AndroidResource Include="Resources\drawable\ic_launcher_foreground.xml" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\HRPeripheral.Shared\HRPeripheral.Shared.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Xamarin.AndroidX.Activity" Version="1.9.3.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Resources\xml\" />
+  </ItemGroup>
+</Project>

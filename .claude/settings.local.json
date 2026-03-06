@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//c/Program Files/Microsoft//**)",
+      "Bash(export JAVA_HOME=\"/c/Program Files/Microsoft/jdk-25.0.2.10-hotspot\":*)",
+      "Bash(JAVA_HOME=\"/c/Program Files/Microsoft/jdk-25.0.2.10-hotspot\" PATH=\"/c/Program Files/Microsoft/jdk-25.0.2.10-hotspot/bin:/c/Windows/System32:$PATH\" yes:*)",
+      "Bash(dotnet workload:*)",
+      "Bash(dotnet --list-sdks:*)"
+    ],
+    "additionalDirectories": [
+      "C:\\android-sdk"
+    ]
+  }
+}
