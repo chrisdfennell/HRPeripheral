@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#121212">
+
+  <LinearLayout
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:orientation="vertical"
+      android:padding="16dp">
+
+    <!-- Title -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Settings"
+        android:textColor="#FFFFFF"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:paddingBottom="16dp" />
+
+    <!-- Calorie Profile Section -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Calorie Profile"
+        android:textColor="#66BB6A"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:paddingBottom="8dp"
+        android:paddingTop="8dp" />
+
+    <!-- Sex toggle -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingTop="4dp"
+        android:paddingBottom="4dp">
+
+      <TextView
+          android:layout_width="0dp"
+          android:layout_height="wrap_content"
+          android:layout_weight="1"
+          android:text="Male"
+          android:textColor="#CCCCCC"
+          android:textSize="16sp" />
+
+      <Switch
+          android:id="@+id/switchCalMale"
+          android:layout_width="wrap_content"
+          android:layout_height="wrap_content" />
+    </LinearLayout>
+
+    <!-- Weight -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Weight"
+        android:textColor="#CCCCCC"
+        android:textSize="16sp"
+        android:paddingTop="8dp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+      <SeekBar
+          android:id="@+id/seekWeight"
+          android:layout_width="0dp"
+          android:layout_height="wrap_content"
+          android:layout_weight="1" />
+
+      <TextView
+          android:id="@+id/txtWeightValue"
+          android:layout_width="80dp"
+          android:layout_height="wrap_content"
+          android:text="75 kg"
+          android:textColor="#FFFFFF"
+          android:textSize="16sp"
+          android:gravity="end" />
+    </LinearLayout>
+
+    <!-- Age -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Age"
+        android:textColor="#CCCCCC"
+        android:textSize="16sp"
+        android:paddingTop="8dp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+      <SeekBar
+          android:id="@+id/seekAge"
+          android:layout_width="0dp"
+          android:layout_height="wrap_content"
+          android:layout_weight="1" />
+
+      <TextView
+          android:id="@+id/txtAgeValue"
+          android:layout_width="80dp"
+          android:layout_height="wrap_content"
+          android:text="35"
+          android:textColor="#FFFFFF"
+          android:textSize="16sp"
+          android:gravity="end" />
+    </LinearLayout>
+
+    <!-- Max HR display -->
+    <TextView
+        android:id="@+id/txtMaxHr"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Max HR: 185 bpm"
+        android:textColor="#AAAAAA"
+        android:textSize="14sp"
+        android:paddingTop="4dp"
+        android:paddingBottom="16dp" />
+
+    <!-- Divider -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#333333" />
+
+    <!-- About Section -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="About"
+        android:textColor="#66BB6A"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:paddingBottom="8dp"
+        android:paddingTop="16dp" />
+
+    <TextView
+        android:id="@+id/txtVersion"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Version 1.0.0"
+        android:textColor="#AAAAAA"
+        android:textSize="14sp"
+        android:paddingBottom="16dp" />
+
+  </LinearLayout>
+</ScrollView>

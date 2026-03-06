@@ -9,10 +9,32 @@
     <RootNamespace>HRPeripheral.Companion</RootNamespace>
     <ApplicationId>com.fennell.hrperipheral.companion</ApplicationId>
     <ApplicationTitle>HR Companion</ApplicationTitle>
+    <ApplicationVersion>1</ApplicationVersion>
+    <ApplicationDisplayVersion>1.0.0</ApplicationDisplayVersion>
     <AndroidStoreUncompressedFileExtensions>.so</AndroidStoreUncompressedFileExtensions>
     <EmbedAssembliesIntoApk>true</EmbedAssembliesIntoApk>
     <AndroidUseLatestPlatformSdk>true</AndroidUseLatestPlatformSdk>
     <NoWarn>$(NoWarn);CA1422;CA1416</NoWarn>
+  </PropertyGroup>
+
+  <!--
+    RELEASE BUILD SETTINGS:
+    Sign release builds via environment variables. Set these in your shell or CI secrets:
+      ANDROID_SIGNING_KEYSTORE=path/to/keystore
+      ANDROID_SIGNING_KEY_ALIAS=alias
+      ANDROID_SIGNING_KEY_PASS=password
+      ANDROID_SIGNING_STORE_PASS=password
+  -->
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <AndroidPackageFormat>aab</AndroidPackageFormat>
+    <AndroidKeyStore Condition="'$(ANDROID_SIGNING_KEYSTORE)' != ''">true</AndroidKeyStore>
+    <AndroidSigningKeyStore Condition="'$(ANDROID_SIGNING_KEYSTORE)' != ''">$(ANDROID_SIGNING_KEYSTORE)</AndroidSigningKeyStore>
+    <AndroidSigningKeyAlias Condition="'$(ANDROID_SIGNING_KEY_ALIAS)' != ''">$(ANDROID_SIGNING_KEY_ALIAS)</AndroidSigningKeyAlias>
+    <AndroidSigningKeyPass Condition="'$(ANDROID_SIGNING_KEY_PASS)' != ''">$(ANDROID_SIGNING_KEY_PASS)</AndroidSigningKeyPass>
+    <AndroidSigningStorePass Condition="'$(ANDROID_SIGNING_STORE_PASS)' != ''">$(ANDROID_SIGNING_STORE_PASS)</AndroidSigningStorePass>
+    <DebugSymbols>false</DebugSymbols>
+    <DebugType>None</DebugType>
+    <Debuggable>false</Debuggable>
   </PropertyGroup>
 
   <ItemGroup>

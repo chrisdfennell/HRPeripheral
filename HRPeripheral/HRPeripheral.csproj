@@ -7,6 +7,8 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <ApplicationId>com.fennell.hrperipheral</ApplicationId>
+    <ApplicationVersion>1</ApplicationVersion>
+    <ApplicationDisplayVersion>1.0.0</ApplicationDisplayVersion>
     <AndroidStoreUncompressedFileExtensions>.so</AndroidStoreUncompressedFileExtensions>
     <EmbedAssembliesIntoApk>true</EmbedAssembliesIntoApk>
     <TrimMode>partial</TrimMode>
@@ -25,16 +27,20 @@
     <AndroidUseSharedRuntime>false</AndroidUseSharedRuntime>
     <RunAOTCompilation>false</RunAOTCompilation>
     <!--
-      To sign release builds for Google Play:
-        1. Generate a keystore:  keytool -genkey -v -keystore hrperipheral.keystore -alias hrperipheral -keyalg RSA -keysize 2048 -validity 10000
-        2. Set AndroidKeyStore to true
-        3. Fill in the alias/passwords below (or pass via environment variables / CI secrets)
-        4. Set AndroidSigningKeyStore to the keystore file path
+      Release signing via environment variables. Set these in your shell or CI secrets:
+        ANDROID_SIGNING_KEYSTORE=path/to/keystore
+        ANDROID_SIGNING_KEY_ALIAS=alias
+        ANDROID_SIGNING_KEY_PASS=password
+        ANDROID_SIGNING_STORE_PASS=password
+
+      Generate a keystore:
+        keytool -genkey -v -keystore hrperipheral.keystore -alias hrperipheral -keyalg RSA -keysize 2048 -validity 10000
     -->
-    <AndroidKeyStore>false</AndroidKeyStore>
-    <AndroidSigningKeyAlias></AndroidSigningKeyAlias>
-    <AndroidSigningKeyPass></AndroidSigningKeyPass>
-    <AndroidSigningStorePass></AndroidSigningStorePass>
+    <AndroidKeyStore Condition="'$(ANDROID_SIGNING_KEYSTORE)' != ''">true</AndroidKeyStore>
+    <AndroidSigningKeyStore Condition="'$(ANDROID_SIGNING_KEYSTORE)' != ''">$(ANDROID_SIGNING_KEYSTORE)</AndroidSigningKeyStore>
+    <AndroidSigningKeyAlias Condition="'$(ANDROID_SIGNING_KEY_ALIAS)' != ''">$(ANDROID_SIGNING_KEY_ALIAS)</AndroidSigningKeyAlias>
+    <AndroidSigningKeyPass Condition="'$(ANDROID_SIGNING_KEY_PASS)' != ''">$(ANDROID_SIGNING_KEY_PASS)</AndroidSigningKeyPass>
+    <AndroidSigningStorePass Condition="'$(ANDROID_SIGNING_STORE_PASS)' != ''">$(ANDROID_SIGNING_STORE_PASS)</AndroidSigningStorePass>
     <DebugSymbols>false</DebugSymbols>
     <DebugType>None</DebugType>
     <Debuggable>false</Debuggable>

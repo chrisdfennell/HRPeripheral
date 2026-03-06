@@ -8,7 +8,6 @@ using Android.Views;
 using Android.Widget;
 using Debug = System.Diagnostics.Debug;
 using Activity = Android.App.Activity;
-using SysException = System.Exception;
 
 namespace HRPeripheral.Companion;
 
@@ -39,6 +38,7 @@ public class CompanionMainActivity : Activity
     // BLE
     private BleScanner? _scanner;
     private bool _scanning;
+    private readonly List<BluetoothDevice> _foundDevices = new();
 
     // Session tracking
     private SessionTracker? _session;
@@ -106,6 +106,22 @@ public class CompanionMainActivity : Activity
             CompanionBlePermissions.Request(this);
     }
 
+    public override bool OnCreateOptionsMenu(IMenu? menu)
+    {
+        menu?.Add(0, 1, 0, "Settings");
+        return true;
+    }
+
+    public override bool OnOptionsItemSelected(IMenuItem item)
+    {
+        if (item.ItemId == 1)
+        {
+            StartActivity(new Intent(this, typeof(CompanionSettingsActivity)));
+            return true;
+        }
+        return base.OnOptionsItemSelected(item);
+    }
+
     public override void OnRequestPermissionsResult(int requestCode, string[] permissions, Permission[] grantResults)
     {
         base.OnRequestPermissionsResult(requestCode, permissions, grantResults);
@@ -118,6 +134,9 @@ public class CompanionMainActivity : Activity
     protected override void OnResume()
     {
         base.OnResume();
+
+        // Reload profile in case settings changed
+        LoadProfile();
 
         _hrReceiver = new HrUpdateReceiver(this);
         _connReceiver = new ConnectionReceiver(this);
@@ -163,7 +182,7 @@ public class CompanionMainActivity : Activity
     }
 
     // =====================================================================
-    // SCANNING
+    // SCANNING + DEVICE PICKER
     // =====================================================================
 
     private void StartScanning()
@@ -177,8 +196,9 @@ public class CompanionMainActivity : Activity
         }
 
         _scanning = true;
+        _foundDevices.Clear();
         _btnScan!.Text = "Scanning...";
-        _txtConnection!.Text = "Scanning for HR Monitor...";
+        _txtConnection!.Text = "Scanning for HR monitors...";
 
         _scanner = new BleScanner();
         _scanner.OnDeviceFound += OnDeviceFound;
@@ -186,6 +206,20 @@ public class CompanionMainActivity : Activity
         {
             _scanning = false;
             _btnScan!.Text = "Scan for HR Monitor";
+            if (_foundDevices.Count == 0)
+            {
+                _txtConnection!.Text = "No HR monitors found.";
+            }
+            else if (_foundDevices.Count == 1)
+            {
+                // Only one device found — connect directly
+                ConnectToDevice(_foundDevices[0]);
+            }
+            else
+            {
+                // Multiple devices — show picker
+                ShowDevicePicker();
+            }
         });
 
         _scanner.StartScan(adapter);
@@ -195,23 +229,41 @@ public class CompanionMainActivity : Activity
     {
         RunOnUiThread(() =>
         {
-            _scanner?.StopScan();
-            _scanning = false;
-            _btnScan!.Text = "Scan for HR Monitor";
-            _txtConnection!.Text = $"Connecting to {device.Name ?? device.Address}...";
-
-            // Start the central service
-            var intent = new Intent(this, typeof(BleCentralService));
-            intent.PutExtra(BleCentralService.EXTRA_DEVICE_ADDRESS, device.Address);
-            if (Build.VERSION.SdkInt >= BuildVersionCodes.O)
-                StartForegroundService(intent);
-            else
-                StartService(intent);
-
-            // Reset session
-            _session?.Reset();
-            _hrGraph?.Clear();
+            _foundDevices.Add(device);
+            _txtConnection!.Text = $"Found {_foundDevices.Count} device(s)...";
         });
+    }
+
+    private void ShowDevicePicker()
+    {
+        var names = _foundDevices
+            .Select(d => string.IsNullOrEmpty(d.Name) ? d.Address! : $"{d.Name} ({d.Address})")
+            .ToArray();
+
+        new AlertDialog.Builder(this)
+            .SetTitle("Select HR Monitor")!
+            .SetItems(names, (sender, args) =>
+            {
+                ConnectToDevice(_foundDevices[args.Which]);
+            })!
+            .SetNegativeButton("Cancel", (EventHandler<DialogClickEventArgs>?)null)!
+            .Show();
+    }
+
+    private void ConnectToDevice(BluetoothDevice device)
+    {
+        _txtConnection!.Text = $"Connecting to {device.Name ?? device.Address}...";
+
+        var intent = new Intent(this, typeof(BleCentralService));
+        intent.PutExtra(BleCentralService.EXTRA_DEVICE_ADDRESS, device.Address);
+        if (Build.VERSION.SdkInt >= BuildVersionCodes.O)
+            StartForegroundService(intent);
+        else
+            StartService(intent);
+
+        // Reset session
+        _session?.Reset();
+        _hrGraph?.Clear();
     }
 
     // =====================================================================
