@@ -199,30 +199,30 @@ public class BlePeripheral : BluetoothGattServerCallback
 
             // Chain: add Battery Service first, then HR Service in OnServiceAdded callback
             _pendingHrService = hrService;
-            _gattServer.AddService(batteryService);
+            _gattServer!.AddService(batteryService);
 
             // 3) Start advertising the Heart Rate Service UUID
             _bluetoothLeAdvertiser = _bluetoothAdapter.BluetoothLeAdvertiser;
 
             // Advertising payload: include service UUID so centrals can filter
-            var advertiseData = new AdvertiseData.Builder()
-                .AddServiceUuid(new ParcelUuid(UUID_HEART_RATE_SERVICE))
-                .SetIncludeTxPowerLevel(false)   // keep packet small
-                .Build();
+            var advertiseData = new AdvertiseData.Builder()!
+                .AddServiceUuid(new ParcelUuid(UUID_HEART_RATE_SERVICE))!
+                .SetIncludeTxPowerLevel(false)!
+                .Build()!;
 
             // Scan response: include device name (shown in scanners)
-            var scanResponse = new AdvertiseData.Builder()
-                .SetIncludeDeviceName(true)
-                .Build();
+            var scanResponse = new AdvertiseData.Builder()!
+                .SetIncludeDeviceName(true)!
+                .Build()!;
 
             // Advertising settings: fast & connectable
-            var settings = new AdvertiseSettings.Builder()
-                .SetAdvertiseMode(AdvertiseMode.LowLatency)
-                .SetTxPowerLevel(AdvertiseTx.PowerHigh)
-                .SetConnectable(true)
-                .Build();
+            var settings = new AdvertiseSettings.Builder()!
+                .SetAdvertiseMode(AdvertiseMode.LowLatency)!
+                .SetTxPowerLevel(AdvertiseTx.PowerHigh)!
+                .SetConnectable(true)!
+                .Build()!;
 
-            _bluetoothLeAdvertiser.StartAdvertising(settings, advertiseData, scanResponse, _advertisingCallback);
+            _bluetoothLeAdvertiser!.StartAdvertising(settings, advertiseData, scanResponse, _advertisingCallback);
             Debug.WriteLine("BLE advertising started successfully.");
             return true;
         }
@@ -459,12 +459,12 @@ public class BlePeripheral : BluetoothGattServerCallback
 
         Debug.WriteLine($"OnDescriptorWriteRequest from {device?.Address}");
 
-        if (descriptor?.Uuid.Equals(UUID_CLIENT_CHARACTERISTIC_CONFIGURATION) != true)
+        if (descriptor?.Uuid?.Equals(UUID_CLIENT_CHARACTERISTIC_CONFIGURATION) != true)
             return;
 
         // Always ACK first if the client requested a response
         if (responseNeeded)
-            _gattServer?.SendResponse(device, requestId, GattStatus.Success, 0, null);
+            _gattServer?.SendResponse(device!, requestId, GattStatus.Success, 0, null!);
 
         bool notificationsEnabled =
             value != null &&
@@ -472,7 +472,7 @@ public class BlePeripheral : BluetoothGattServerCallback
             value[0] == BluetoothGattDescriptor.EnableNotificationValue[0];
 
         // Determine which characteristic this CCCD belongs to
-        var parentUuid = descriptor.Characteristic?.Uuid;
+        var parentUuid = descriptor!.Characteristic?.Uuid;
 
         if (parentUuid?.Equals(UUID_HEART_RATE_MEASUREMENT) == true)
             HandleHrSubscription(device, notificationsEnabled);
@@ -544,16 +544,16 @@ public class BlePeripheral : BluetoothGattServerCallback
         if (characteristic?.Uuid?.Equals(UUID_BATTERY_LEVEL) == true)
         {
             int level = GetBatteryLevel();
-            _gattServer?.SendResponse(device, requestId, GattStatus.Success, 0, new byte[] { (byte)level });
+            _gattServer?.SendResponse(device!, requestId, GattStatus.Success, 0, new byte[] { (byte)level });
             Debug.WriteLine($"Battery read request from {device?.Address}: {level}%");
         }
         else if (characteristic?.Uuid?.Equals(UUID_BODY_SENSOR_LOCATION) == true)
         {
-            _gattServer?.SendResponse(device, requestId, GattStatus.Success, 0, new byte[] { 1 });
+            _gattServer?.SendResponse(device!, requestId, GattStatus.Success, 0, new byte[] { 1 });
         }
         else
         {
-            _gattServer?.SendResponse(device, requestId, GattStatus.RequestNotSupported, 0, null);
+            _gattServer?.SendResponse(device!, requestId, GattStatus.RequestNotSupported, 0, null!);
         }
     }
 

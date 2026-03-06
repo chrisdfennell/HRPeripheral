@@ -110,7 +110,7 @@ public class HeartRateService : Service, ISensorEventListener
         UpdateNotificationText("Waiting for heart rate...");
 
         // Load preferences
-        var sp = GetSharedPreferences(HrpPrefs.PREFS_NAME, FileCreationMode.Private);
+        var sp = GetSharedPreferences(HrpPrefs.PREFS_NAME, FileCreationMode.Private)!;
         _autoPause = sp.GetBoolean(HrpPrefs.KEY_AUTO_PAUSE, HrpPrefs.DEFAULT_AUTO_PAUSE);
         LogD($"Auto-pause pref = {_autoPause}");
 
@@ -125,7 +125,7 @@ public class HeartRateService : Service, ISensorEventListener
         _watchdogResumeAfterMs = HrpPrefs.ClampWatchdogResume(sp.GetInt(HrpPrefs.KEY_WATCHDOG_RESUME_S, HrpPrefs.DEFAULT_WATCHDOG_RESUME_S)) * 1000;
         LogD($"Timings: stillWindow={_fallbackStillWindowMs}ms watchdogResume={_watchdogResumeAfterMs}ms");
 
-        _sm = (SensorManager)GetSystemService(SensorService);
+        _sm = (SensorManager?)GetSystemService(SensorService);
         if (_sm == null) { LogE("SensorManager is null!"); }
 
         // --- Acquire sensors if present ---
@@ -255,18 +255,18 @@ public class HeartRateService : Service, ISensorEventListener
                 }
             }
             catch (SysException ex) { LogE("Watchdog tick error", ex); }
-            _wdHandler?.PostDelayed(_wdTick, WATCHDOG_PERIOD_MS);
+            _wdHandler?.PostDelayed(_wdTick!, WATCHDOG_PERIOD_MS);
         });
-        _wdHandler.PostDelayed(_wdTick, WATCHDOG_PERIOD_MS);
+        _wdHandler.PostDelayed(_wdTick!, WATCHDOG_PERIOD_MS);
 
         // --- Battery level periodic update ---
         _batteryTick = new Java.Lang.Runnable(() =>
         {
             try { _ble?.UpdateBatteryLevel(); }
             catch (SysException ex) { LogE("Battery tick error", ex); }
-            _wdHandler?.PostDelayed(_batteryTick, BATTERY_UPDATE_INTERVAL_MS);
+            _wdHandler?.PostDelayed(_batteryTick!, BATTERY_UPDATE_INTERVAL_MS);
         });
-        _wdHandler.PostDelayed(_batteryTick, BATTERY_UPDATE_INTERVAL_MS);
+        _wdHandler.PostDelayed(_batteryTick!, BATTERY_UPDATE_INTERVAL_MS);
 
         LogI("OnCreate() complete");
     }
@@ -286,8 +286,8 @@ public class HeartRateService : Service, ISensorEventListener
         LogI("OnDestroy()");
 
         // Stop watchdog and battery timer
-        try { _wdHandler?.RemoveCallbacks(_batteryTick); } catch (SysException ex) { LogW($"RemoveCallbacks(battery) error: {ex.Message}"); }
-        try { _wdHandler?.RemoveCallbacks(_wdTick); } catch (SysException ex) { LogW($"RemoveCallbacks(watchdog) error: {ex.Message}"); }
+        try { if (_batteryTick != null) _wdHandler?.RemoveCallbacks(_batteryTick); } catch (SysException ex) { LogW($"RemoveCallbacks(battery) error: {ex.Message}"); }
+        try { if (_wdTick != null) _wdHandler?.RemoveCallbacks(_wdTick); } catch (SysException ex) { LogW($"RemoveCallbacks(watchdog) error: {ex.Message}"); }
         _batteryTick = null; _wdTick = null; _wdHandler = null;
 
         // Receivers

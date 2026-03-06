@@ -65,8 +65,8 @@ public class SettingsActivity : Activity
         {
             _switchHold.CheckedChange += (s, e) =>
             {
-                var sp = GetSharedPreferences(HrpPrefs.PREFS_NAME, FileCreationMode.Private);
-                using var edit = sp.Edit();
+                var sp = GetSharedPreferences(HrpPrefs.PREFS_NAME, FileCreationMode.Private)!;
+                using var edit = sp.Edit()!;
                 edit.PutBoolean(HrpPrefs.KEY_HOLD_ENABLED, e.IsChecked);
                 edit.Commit();
             };
@@ -78,8 +78,8 @@ public class SettingsActivity : Activity
         {
             _switchAutoPause.CheckedChange += (s, e) =>
             {
-                var sp = GetSharedPreferences(HrpPrefs.PREFS_NAME, FileCreationMode.Private);
-                using var edit = sp.Edit();
+                var sp = GetSharedPreferences(HrpPrefs.PREFS_NAME, FileCreationMode.Private)!;
+                using var edit = sp.Edit()!;
                 edit.PutBoolean(HrpPrefs.KEY_AUTO_PAUSE, e.IsChecked);
                 edit.Commit();
             };
@@ -96,8 +96,8 @@ public class SettingsActivity : Activity
         {
             _switchCalMale.CheckedChange += (s, e) =>
             {
-                var sp = GetSharedPreferences(HrpPrefs.PREFS_NAME, FileCreationMode.Private);
-                using var edit = sp.Edit();
+                var sp = GetSharedPreferences(HrpPrefs.PREFS_NAME, FileCreationMode.Private)!;
+                using var edit = sp.Edit()!;
                 edit.PutBoolean(HrpPrefs.KEY_CAL_MALE, e.IsChecked);
                 edit.Commit();
             };
@@ -111,8 +111,8 @@ public class SettingsActivity : Activity
                 if (!e.FromUser) return;
                 int kg = e.Progress + HrpPrefs.MIN_CAL_WEIGHT_KG;
                 if (_txtWeightValue != null) _txtWeightValue.Text = $"{kg} kg";
-                var sp = GetSharedPreferences(HrpPrefs.PREFS_NAME, FileCreationMode.Private);
-                using var edit = sp.Edit();
+                var sp = GetSharedPreferences(HrpPrefs.PREFS_NAME, FileCreationMode.Private)!;
+                using var edit = sp.Edit()!;
                 edit.PutInt(HrpPrefs.KEY_CAL_WEIGHT_KG, kg);
                 edit.Commit();
             };
@@ -126,8 +126,8 @@ public class SettingsActivity : Activity
                 if (!e.FromUser) return;
                 int age = e.Progress + HrpPrefs.MIN_CAL_AGE;
                 if (_txtAgeValue != null) _txtAgeValue.Text = $"{age}";
-                var sp = GetSharedPreferences(HrpPrefs.PREFS_NAME, FileCreationMode.Private);
-                using var edit = sp.Edit();
+                var sp = GetSharedPreferences(HrpPrefs.PREFS_NAME, FileCreationMode.Private)!;
+                using var edit = sp.Edit()!;
                 edit.PutInt(HrpPrefs.KEY_CAL_AGE, age);
                 edit.Commit();
             };
@@ -144,7 +144,7 @@ public class SettingsActivity : Activity
                 var ble = BleHost.Peripheral;
                 if (ble == null)
                 {
-                    Toast.MakeText(this, "BLE not available", ToastLength.Short).Show();
+                    Toast.MakeText(this, "BLE not available", ToastLength.Short)!.Show();
                     return;
                 }
 
@@ -153,7 +153,7 @@ public class SettingsActivity : Activity
                 ble.ForgetAllDevices(alsoUnbond: true); // set false to avoid unpairing via reflection
                 ble.StartAdvertising();
 
-                Toast.MakeText(this, "All devices forgotten", ToastLength.Short).Show();
+                Toast.MakeText(this, "All devices forgotten", ToastLength.Short)!.Show();
                 RebuildKnownDevices();
             };
         }
@@ -164,7 +164,7 @@ public class SettingsActivity : Activity
         base.OnResume();
 
         // prefs -> ui
-        var sp = GetSharedPreferences(HrpPrefs.PREFS_NAME, FileCreationMode.Private);
+        var sp = GetSharedPreferences(HrpPrefs.PREFS_NAME, FileCreationMode.Private)!;
         bool enabled = sp.GetBoolean(HrpPrefs.KEY_HOLD_ENABLED, HrpPrefs.DEFAULT_HOLD_ENABLED);
         int offset = HrpPrefs.ClampHoldOffset(sp.GetInt(HrpPrefs.KEY_HOLD_SECONDS, HrpPrefs.DEFAULT_HOLD_OFFSET));
 
@@ -213,8 +213,8 @@ public class SettingsActivity : Activity
     private void SaveOffset(int offset)
     {
         offset = HrpPrefs.ClampHoldOffset(offset);
-        var sp = GetSharedPreferences(HrpPrefs.PREFS_NAME, FileCreationMode.Private);
-        using var edit = sp.Edit();
+        var sp = GetSharedPreferences(HrpPrefs.PREFS_NAME, FileCreationMode.Private)!;
+        using var edit = sp.Edit()!;
         edit.PutInt(HrpPrefs.KEY_HOLD_SECONDS, offset);
         edit.Commit();
     }
@@ -257,7 +257,7 @@ public class SettingsActivity : Activity
             {
                 // forget a single device
                 ble.ForgetDevice(addr, alsoUnbond: true);
-                Toast.MakeText(this, $"Forgot {addr}", ToastLength.Short).Show();
+                Toast.MakeText(this, $"Forgot {addr}", ToastLength.Short)!.Show();
                 RebuildKnownDevices();
             };
 

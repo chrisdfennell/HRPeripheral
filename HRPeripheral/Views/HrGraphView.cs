@@ -240,8 +240,8 @@ public class HrGraphView : View
         _bgGradient = new LinearGradient(
             0, 0, 0, h,
             new int[] { cTop, cBottom },   // <-- int[] overload is safe
-            (float[])null,
-            Shader.TileMode.Clamp
+            null!,
+            Shader.TileMode.Clamp!
         );
     }
 

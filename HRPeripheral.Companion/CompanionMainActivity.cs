@@ -99,7 +99,7 @@ public class CompanionMainActivity : Activity
         _timerTick = new Java.Lang.Runnable(() =>
         {
             UpdateDuration();
-            _timerHandler.PostDelayed(_timerTick, 1000);
+            _timerHandler.PostDelayed(_timerTick!, 1000);
         });
 
         if (!CompanionBlePermissions.HasAll(this))
@@ -155,7 +155,7 @@ public class CompanionMainActivity : Activity
             RegisterReceiver(_connReceiver, connFilter);
         }
 
-        _timerHandler.Post(_timerTick);
+        _timerHandler.Post(_timerTick!);
     }
 
     protected override void OnPause()
@@ -172,7 +172,7 @@ public class CompanionMainActivity : Activity
 
     private void LoadProfile()
     {
-        var sp = GetSharedPreferences(HrpPrefs.PREFS_NAME, FileCreationMode.Private);
+        var sp = GetSharedPreferences(HrpPrefs.PREFS_NAME, FileCreationMode.Private)!;
         bool male = sp.GetBoolean(HrpPrefs.KEY_CAL_MALE, HrpPrefs.DEFAULT_CAL_MALE);
         int weight = HrpPrefs.ClampWeight(sp.GetInt(HrpPrefs.KEY_CAL_WEIGHT_KG, HrpPrefs.DEFAULT_CAL_WEIGHT_KG));
         _age = HrpPrefs.ClampAge(sp.GetInt(HrpPrefs.KEY_CAL_AGE, HrpPrefs.DEFAULT_CAL_AGE));
@@ -246,7 +246,7 @@ public class CompanionMainActivity : Activity
             {
                 ConnectToDevice(_foundDevices[args.Which]);
             })!
-            .SetNegativeButton("Cancel", (EventHandler<DialogClickEventArgs>?)null)!
+            .SetNegativeButton("Cancel", (EventHandler<DialogClickEventArgs>?)null!)!
             .Show();
     }
 

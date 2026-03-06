@@ -106,7 +106,7 @@ public class MainActivity : Activity
 
             if (elapsed < _holdMillis)
             {
-                _handler.PostDelayed(_progressTick, 50);
+                _handler.PostDelayed(_progressTick!, 50);
             }
         });
 
@@ -127,8 +127,8 @@ public class MainActivity : Activity
 
             Haptic();
             ScheduleCountdownHaptics();
-            _handler.PostDelayed(_triggerExit, _holdMillis);
-            _handler.Post(_progressTick);
+            _handler.PostDelayed(_triggerExit!, _holdMillis);
+            _handler.Post(_progressTick!);
         });
 
         // Touch handling for the full-screen overlay
@@ -156,7 +156,7 @@ public class MainActivity : Activity
                         }
                         _holding = true;
                         // Require PRE_HOLD_DELAY_MS of continuous hold before showing countdown
-                        _handler.PostDelayed(_startCountdown, PRE_HOLD_DELAY_MS);
+                        _handler.PostDelayed(_startCountdown!, PRE_HOLD_DELAY_MS);
                         e.Handled = true;
                         break;
 
@@ -193,21 +193,21 @@ public class MainActivity : Activity
     private void CancelHold()
     {
         // Always clear any pending delayed start
-        _handler.RemoveCallbacks(_startCountdown);
+        _handler.RemoveCallbacks(_startCountdown!);
 
         if (!_holding) return;
 
         _holding = false;
 
         // Cancel anything scheduled
-        _handler.RemoveCallbacks(_triggerExit);
-        _handler.RemoveCallbacks(_progressTick);
-        _handler.RemoveCallbacks(_hapticTick);
+        _handler.RemoveCallbacks(_triggerExit!);
+        _handler.RemoveCallbacks(_progressTick!);
+        _handler.RemoveCallbacks(_hapticTick!);
 
         if (_countdown != null) _countdown.Visibility = ViewStates.Gone;
         _btnSettings?.Animate()?.Alpha(1f)?.SetDuration(150)?.Start();
 
-        Toast.MakeText(this, "Hold cancelled", ToastLength.Short).Show();
+        Toast.MakeText(this, "Hold cancelled", ToastLength.Short)!.Show();
     }
 
     private void ScheduleCountdownHaptics()
@@ -220,10 +220,10 @@ public class MainActivity : Activity
             if (elapsed < _holdMillis - 1000)
             {
                 Haptic();
-                _handler.PostDelayed(_hapticTick, 1000);
+                _handler.PostDelayed(_hapticTick!, 1000);
             }
         });
-        _handler.PostDelayed(_hapticTick, 1000);
+        _handler.PostDelayed(_hapticTick!, 1000);
     }
 
     private void Haptic(bool longBuzz = false)
@@ -232,7 +232,7 @@ public class MainActivity : Activity
         {
             if (Build.VERSION.SdkInt >= BuildVersionCodes.S) // 31+
             {
-                var vm = (VibratorManager)GetSystemService(VibratorManagerService);
+                var vm = (VibratorManager)GetSystemService(VibratorManagerService)!;
                 var vib = vm.DefaultVibrator;
                 if (Build.VERSION.SdkInt >= BuildVersionCodes.O)
                     vib.Vibrate(VibrationEffect.CreateOneShot(longBuzz ? 180 : 30, VibrationEffect.DefaultAmplitude));
@@ -241,7 +241,7 @@ public class MainActivity : Activity
             }
             else
             {
-                var vib = (Vibrator)GetSystemService(VibratorService);
+                var vib = (Vibrator)GetSystemService(VibratorService)!;
                 if (Build.VERSION.SdkInt >= BuildVersionCodes.O)
                     vib.Vibrate(VibrationEffect.CreateOneShot(longBuzz ? 180 : 30, VibrationEffect.DefaultAmplitude));
                 else
@@ -279,7 +279,7 @@ public class MainActivity : Activity
 
     private void LoadPrefs()
     {
-        var sp = GetSharedPreferences(HrpPrefs.PREFS_NAME, FileCreationMode.Private);
+        var sp = GetSharedPreferences(HrpPrefs.PREFS_NAME, FileCreationMode.Private)!;
         int offset = sp.GetInt(HrpPrefs.KEY_HOLD_SECONDS, HrpPrefs.DEFAULT_HOLD_OFFSET);
         _holdMillis = HrpPrefs.HoldOffsetToMillis(offset);
 
@@ -289,7 +289,7 @@ public class MainActivity : Activity
 
     private bool IsHoldEnabled()
     {
-        var sp = GetSharedPreferences(HrpPrefs.PREFS_NAME, FileCreationMode.Private);
+        var sp = GetSharedPreferences(HrpPrefs.PREFS_NAME, FileCreationMode.Private)!;
         return sp.GetBoolean(HrpPrefs.KEY_HOLD_ENABLED, HrpPrefs.DEFAULT_HOLD_ENABLED);
     }
 
@@ -305,7 +305,7 @@ public class MainActivity : Activity
         }
         else
         {
-            Toast.MakeText(this, "Permissions are required for the app to function.", ToastLength.Long).Show();
+            Toast.MakeText(this, "Permissions are required for the app to function.", ToastLength.Long)!.Show();
         }
     }
 

@@ -33,13 +33,13 @@ public class BleScanner
 
         _scanCallback = new ScanCallbackImpl(this);
 
-        var filter = new ScanFilter.Builder()
-            .SetServiceUuid(new ParcelUuid(UUID_HR_SERVICE))
-            .Build();
+        var filter = new ScanFilter.Builder()!
+            .SetServiceUuid(new ParcelUuid(UUID_HR_SERVICE))!
+            .Build()!;
 
-        var settings = new ScanSettings.Builder()
-            .SetScanMode(Android.Bluetooth.LE.ScanMode.LowLatency)
-            .Build();
+        var settings = new ScanSettings.Builder()!
+            .SetScanMode(Android.Bluetooth.LE.ScanMode.LowLatency)!
+            .Build()!;
 
         _scanner.StartScan(new List<ScanFilter> { filter }, settings, _scanCallback);
         Debug.WriteLine("BLE scan started.");
