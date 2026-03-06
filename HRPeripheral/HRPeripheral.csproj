@@ -2,7 +2,7 @@
   <PropertyGroup>
     <TargetFramework>net10.0-android</TargetFramework>
     <RuntimeIdentifiers>android-arm64;android-arm;android-x64</RuntimeIdentifiers>
-    <SupportedOSPlatformVersion>23</SupportedOSPlatformVersion>
+    <SupportedOSPlatformVersion>26</SupportedOSPlatformVersion>
     <OutputType>Exe</OutputType>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -57,6 +57,8 @@
 
   <ItemGroup>
     <PackageReference Include="Xamarin.AndroidX.Activity" Version="1.9.3.1" />
+    <PackageReference Include="Xamarin.AndroidX.Wear.Tiles" Version="1.4.1.1" />
+    <PackageReference Include="Xamarin.AndroidX.Concurrent.Futures" Version="1.2.0.4" />
   </ItemGroup>
 
   <ItemGroup>

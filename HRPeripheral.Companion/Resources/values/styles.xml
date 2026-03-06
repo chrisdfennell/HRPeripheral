@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+  <!-- AMOLED dark theme for HR Companion -->
+  <style name="AppTheme" parent="@android:style/Theme.DeviceDefault.NoActionBar">
+    <!-- Pure AMOLED black backgrounds -->
+    <item name="android:colorBackground">#000000</item>
+    <item name="android:windowBackground">@android:color/black</item>
+
+    <!-- Text colors -->
+    <item name="android:textColorPrimary">#FFFFFF</item>
+    <item name="android:textColorSecondary">#CCCCCC</item>
+    <item name="android:textColorTertiary">#AAAAAA</item>
+    <item name="android:textColorHint">#888888</item>
+
+    <!-- Accent / highlight color (green matching existing UI) -->
+    <item name="android:colorAccent">#66BB6A</item>
+    <item name="android:colorControlActivated">#66BB6A</item>
+    <item name="android:colorControlHighlight">#3366BB6A</item>
+    <item name="android:colorControlNormal">#CCCCCC</item>
+
+    <!-- Status bar and navigation bar -->
+    <item name="android:statusBarColor">#000000</item>
+    <item name="android:navigationBarColor">#000000</item>
+
+    <!-- Dialog styling -->
+    <item name="android:alertDialogTheme">@style/AppTheme.Dialog</item>
+  </style>
+
+  <!-- Dark dialog theme -->
+  <style name="AppTheme.Dialog" parent="@android:style/Theme.DeviceDefault.Dialog">
+    <item name="android:colorBackground">#1E1E1E</item>
+    <item name="android:windowBackground">@android:color/black</item>
+    <item name="android:textColorPrimary">#FFFFFF</item>
+    <item name="android:textColorSecondary">#CCCCCC</item>
+    <item name="android:colorAccent">#66BB6A</item>
+  </style>
+
+</resources>

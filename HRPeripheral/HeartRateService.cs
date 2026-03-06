@@ -432,6 +432,9 @@ public class HeartRateService : Service, ISensorEventListener
             LogD("BLE not advertising — HR not sent to subscribers");
         }
 
+        // Cache latest HR for tile/complication
+        CacheHrForTile(hr);
+
         // Notify UI
         BroadcastUpdate();
     }
@@ -585,6 +588,27 @@ public class HeartRateService : Service, ISensorEventListener
         else
         {
             LogD("CreateChannel skipped (pre-O)");
+        }
+    }
+
+    /// <summary>
+    /// Caches the latest HR, kcal, and zone in SharedPreferences so the tile can read them.
+    /// </summary>
+    private void CacheHrForTile(int hr)
+    {
+        try
+        {
+            var sp = GetSharedPreferences(HrpPrefs.PREFS_NAME, FileCreationMode.Private)!;
+            using var edit = sp.Edit()!;
+            edit.PutInt("tile_hr", hr);
+            edit.PutFloat("tile_kcal", (float)_kcal);
+            edit.PutInt("tile_zone", HeartRateZone.GetZone(hr, _calAge));
+            edit.PutLong("tile_timestamp", Java.Lang.JavaSystem.CurrentTimeMillis());
+            edit.Apply();
+        }
+        catch (SysException ex)
+        {
+            LogW($"CacheHrForTile error: {ex.Message}");
         }
     }
 

@@ -1,0 +1,239 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#000000">
+
+  <LinearLayout
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:orientation="vertical"
+      android:padding="16dp">
+
+    <!-- Title -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Session Summary"
+        android:textColor="#FFFFFF"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:gravity="center"
+        android:paddingBottom="16dp" />
+
+    <!-- Duration (large, centered) -->
+    <TextView
+        android:id="@+id/txtSummaryDuration"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="00:00"
+        android:textColor="#FFFFFF"
+        android:textSize="56sp"
+        android:fontFamily="sans-serif-light"
+        android:gravity="center"
+        android:paddingTop="8dp"
+        android:paddingBottom="4dp" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Duration"
+        android:textColor="#AAAAAA"
+        android:textSize="14sp"
+        android:gravity="center"
+        android:paddingBottom="16dp" />
+
+    <!-- Divider -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#333333" />
+
+    <!-- Stats row: Avg HR, Min HR, Max HR -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:paddingTop="16dp"
+        android:paddingBottom="8dp">
+
+      <!-- Avg HR -->
+      <LinearLayout
+          android:layout_width="0dp"
+          android:layout_height="wrap_content"
+          android:layout_weight="1"
+          android:orientation="vertical"
+          android:gravity="center">
+
+        <TextView
+            android:id="@+id/txtSummaryAvgHr"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="--"
+            android:textColor="#FFFFFF"
+            android:textSize="32sp"
+            android:fontFamily="sans-serif-light" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Avg HR"
+            android:textColor="#AAAAAA"
+            android:textSize="12sp" />
+
+      </LinearLayout>
+
+      <!-- Min HR -->
+      <LinearLayout
+          android:layout_width="0dp"
+          android:layout_height="wrap_content"
+          android:layout_weight="1"
+          android:orientation="vertical"
+          android:gravity="center">
+
+        <TextView
+            android:id="@+id/txtSummaryMinHr"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="--"
+            android:textColor="#FFFFFF"
+            android:textSize="32sp"
+            android:fontFamily="sans-serif-light" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Min HR"
+            android:textColor="#AAAAAA"
+            android:textSize="12sp" />
+
+      </LinearLayout>
+
+      <!-- Max HR -->
+      <LinearLayout
+          android:layout_width="0dp"
+          android:layout_height="wrap_content"
+          android:layout_weight="1"
+          android:orientation="vertical"
+          android:gravity="center">
+
+        <TextView
+            android:id="@+id/txtSummaryMaxHr"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="--"
+            android:textColor="#FFFFFF"
+            android:textSize="32sp"
+            android:fontFamily="sans-serif-light" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Max HR"
+            android:textColor="#AAAAAA"
+            android:textSize="12sp" />
+
+      </LinearLayout>
+
+    </LinearLayout>
+
+    <!-- Divider -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#333333" />
+
+    <!-- Calories -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:paddingTop="16dp"
+        android:paddingBottom="16dp">
+
+      <TextView
+          android:id="@+id/txtSummaryCalories"
+          android:layout_width="wrap_content"
+          android:layout_height="wrap_content"
+          android:text="0.0"
+          android:textColor="#FFFFFF"
+          android:textSize="32sp"
+          android:fontFamily="sans-serif-light" />
+
+      <TextView
+          android:layout_width="wrap_content"
+          android:layout_height="wrap_content"
+          android:text="Total kcal"
+          android:textColor="#AAAAAA"
+          android:textSize="12sp" />
+
+    </LinearLayout>
+
+    <!-- Divider -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#333333" />
+
+    <!-- Zone time header -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Zone Time"
+        android:textColor="#AAAAAA"
+        android:textSize="14sp"
+        android:paddingTop="16dp"
+        android:paddingBottom="8dp" />
+
+    <!-- Zone time breakdown (5 bars built dynamically) -->
+    <LinearLayout
+        android:id="@+id/zoneSummaryBreakdown"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingBottom="16dp" />
+
+    <!-- Divider -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#333333" />
+
+    <!-- Action buttons row: Export CSV + Share -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:paddingTop="16dp"
+        android:paddingBottom="8dp">
+
+      <Button
+          android:id="@+id/btnExportCsv"
+          android:layout_width="0dp"
+          android:layout_height="wrap_content"
+          android:layout_weight="1"
+          android:text="Export CSV"
+          android:layout_marginEnd="4dp" />
+
+      <Button
+          android:id="@+id/btnShare"
+          android:layout_width="0dp"
+          android:layout_height="wrap_content"
+          android:layout_weight="1"
+          android:text="Share"
+          android:layout_marginStart="4dp" />
+
+    </LinearLayout>
+
+    <!-- Done button -->
+    <Button
+        android:id="@+id/btnDone"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Done"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="16dp" />
+
+  </LinearLayout>
+</ScrollView>

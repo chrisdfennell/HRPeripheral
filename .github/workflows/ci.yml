@@ -57,10 +57,24 @@ jobs:
       - name: Restore dependencies
         run: dotnet restore
 
+      - name: Generate signing keystore
+        run: |
+          keytool -genkeypair -v \
+            -keystore ${{ github.workspace }}/release.keystore \
+            -alias release \
+            -keyalg RSA -keysize 2048 -validity 10000 \
+            -storepass android -keypass android \
+            -dname "CN=HRPeripheral CI,O=HRPeripheral,C=US"
+
       - name: Build Wear OS APK
         run: |
           dotnet publish HRPeripheral/ -c Release --no-restore \
             -p:AndroidPackageFormat=apk \
+            -p:AndroidKeyStore=true \
+            -p:AndroidSigningKeyStore=${{ github.workspace }}/release.keystore \
+            -p:AndroidSigningKeyAlias=release \
+            -p:AndroidSigningKeyPass=android \
+            -p:AndroidSigningStorePass=android \
             -p:ApplicationVersion=${{ github.run_number }} \
             -p:ApplicationDisplayVersion=1.0.${{ github.run_number }}
 
@@ -68,14 +82,25 @@ jobs:
         run: |
           dotnet publish HRPeripheral.Companion/ -c Release --no-restore \
             -p:AndroidPackageFormat=apk \
+            -p:AndroidKeyStore=true \
+            -p:AndroidSigningKeyStore=${{ github.workspace }}/release.keystore \
+            -p:AndroidSigningKeyAlias=release \
+            -p:AndroidSigningKeyPass=android \
+            -p:AndroidSigningStorePass=android \
             -p:ApplicationVersion=${{ github.run_number }} \
             -p:ApplicationDisplayVersion=1.0.${{ github.run_number }}
 
       - name: Find APKs
         id: apks
         run: |
-          WEAR_APK=$(find HRPeripheral/bin/Release/ -name '*.apk' | head -1)
-          COMPANION_APK=$(find HRPeripheral.Companion/bin/Release/ -name '*.apk' | head -1)
+          echo "=== All APKs found ==="
+          find . -name '*.apk' -type f
+          echo "==="
+          # Prefer *-Signed.apk if it exists, otherwise fall back to any .apk
+          WEAR_APK=$(find HRPeripheral/bin/Release/ -name '*-Signed.apk' -type f | head -1)
+          [ -z "$WEAR_APK" ] && WEAR_APK=$(find HRPeripheral/bin/Release/ -name '*.apk' -type f | head -1)
+          COMPANION_APK=$(find HRPeripheral.Companion/bin/Release/ -name '*-Signed.apk' -type f | head -1)
+          [ -z "$COMPANION_APK" ] && COMPANION_APK=$(find HRPeripheral.Companion/bin/Release/ -name '*.apk' -type f | head -1)
           echo "wear=$WEAR_APK" >> "$GITHUB_OUTPUT"
           echo "companion=$COMPANION_APK" >> "$GITHUB_OUTPUT"
           echo "Found Wear APK: $WEAR_APK"

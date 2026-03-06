@@ -8,7 +8,7 @@ namespace HRPeripheral.Companion;
 
 [Activity(
     Label = "Settings",
-    Theme = "@android:style/Theme.DeviceDefault",
+    Theme = "@style/AppTheme",
     ScreenOrientation = ScreenOrientation.Portrait
 )]
 public class CompanionSettingsActivity : Activity

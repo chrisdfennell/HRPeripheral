@@ -14,7 +14,7 @@ namespace HRPeripheral.Companion;
 [Activity(
     Label = "HR Companion",
     MainLauncher = true,
-    Theme = "@android:style/Theme.DeviceDefault",
+    Theme = "@style/AppTheme",
     Exported = true,
     ScreenOrientation = ScreenOrientation.Portrait
 )]
@@ -30,6 +30,7 @@ public class CompanionMainActivity : Activity
     private TextView? _txtDuration;
     private LinearLayout? _zoneBreakdown;
     private Button? _btnScan;
+    private Button? _btnStopSession;
 
     // Zone breakdown bar views
     private readonly TextView[] _zoneLabels = new TextView[5];
@@ -38,6 +39,7 @@ public class CompanionMainActivity : Activity
     // BLE
     private BleScanner? _scanner;
     private bool _scanning;
+    private bool _connected;
     private readonly List<BluetoothDevice> _foundDevices = new();
 
     // Session tracking
@@ -67,6 +69,7 @@ public class CompanionMainActivity : Activity
         _txtDuration = FindViewById<TextView>(Resource.Id.txtDuration);
         _zoneBreakdown = FindViewById<LinearLayout>(Resource.Id.zoneBreakdown);
         _btnScan = FindViewById<Button>(Resource.Id.btnScan);
+        _btnStopSession = FindViewById<Button>(Resource.Id.btnStopSession);
 
         // Load user profile from shared prefs (or use defaults)
         LoadProfile();
@@ -93,6 +96,12 @@ public class CompanionMainActivity : Activity
 
                 StartScanning();
             };
+        }
+
+        // Stop Session button
+        if (_btnStopSession != null)
+        {
+            _btnStopSession.Click += (s, e) => StopSession();
         }
 
         // Duration timer
@@ -267,6 +276,41 @@ public class CompanionMainActivity : Activity
     }
 
     // =====================================================================
+    // STOP SESSION
+    // =====================================================================
+
+    private void StopSession()
+    {
+        // Stop the BLE service
+        var serviceIntent = new Intent(this, typeof(BleCentralService));
+        StopService(serviceIntent);
+
+        // Launch summary with current session data
+        if (_session != null && _session.SampleCount > 0)
+        {
+            SessionSummaryActivity.LaunchSummary(this, _session);
+        }
+
+        // Reset UI state
+        _connected = false;
+        if (_btnStopSession != null)
+            _btnStopSession.Visibility = ViewStates.Gone;
+
+        _txtConnection!.Text = "Disconnected";
+        _txtConnection.SetTextColor(Color.Argb(255, 0xAA, 0xAA, 0xAA));
+        _txtHrValue!.Text = "--";
+        _txtZoneName!.Text = "";
+        _txtBattery!.Text = "";
+        _txtCalories!.Text = "0.0 kcal";
+        _txtDuration!.Text = "00:00";
+        _hrGraph?.Clear();
+
+        // Reset session tracker
+        LoadProfile();
+        BuildZoneBreakdown();
+    }
+
+    // =====================================================================
     // HR / BATTERY UPDATES
     // =====================================================================
 
@@ -309,10 +353,14 @@ public class CompanionMainActivity : Activity
 
     private void OnConnectionChanged(bool connected)
     {
+        _connected = connected;
         _txtConnection!.Text = connected ? "Connected" : "Disconnected";
         _txtConnection.SetTextColor(connected
             ? Color.Argb(255, 0x66, 0xBB, 0x6A)
             : Color.Argb(255, 0xAA, 0xAA, 0xAA));
+
+        if (_btnStopSession != null)
+            _btnStopSession.Visibility = connected ? ViewStates.Visible : ViewStates.Gone;
     }
 
     // =====================================================================
