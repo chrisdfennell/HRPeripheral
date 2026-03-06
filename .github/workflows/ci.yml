@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main, master]
+    branches: [main]
   pull_request:
     branches: [main, master]
 
@@ -35,3 +35,66 @@ jobs:
 
       - name: Run tests
         run: dotnet test HRPeripheral.Tests/ -c Release --no-restore --verbosity normal
+
+  release:
+    needs: build-and-test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Install Android workload
+        run: dotnet workload install android
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Build Wear OS APK
+        run: |
+          dotnet publish HRPeripheral/ -c Release --no-restore \
+            -p:AndroidPackageFormat=apk \
+            -p:ApplicationVersion=${{ github.run_number }} \
+            -p:ApplicationDisplayVersion=1.0.${{ github.run_number }}
+
+      - name: Build Companion APK
+        run: |
+          dotnet publish HRPeripheral.Companion/ -c Release --no-restore \
+            -p:AndroidPackageFormat=apk \
+            -p:ApplicationVersion=${{ github.run_number }} \
+            -p:ApplicationDisplayVersion=1.0.${{ github.run_number }}
+
+      - name: Find APKs
+        id: apks
+        run: |
+          WEAR_APK=$(find HRPeripheral/bin/Release/ -name '*.apk' | head -1)
+          COMPANION_APK=$(find HRPeripheral.Companion/bin/Release/ -name '*.apk' | head -1)
+          echo "wear=$WEAR_APK" >> "$GITHUB_OUTPUT"
+          echo "companion=$COMPANION_APK" >> "$GITHUB_OUTPUT"
+          echo "Found Wear APK: $WEAR_APK"
+          echo "Found Companion APK: $COMPANION_APK"
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.${{ github.run_number }}
+          name: v1.0.${{ github.run_number }}
+          body: |
+            Automated release from commit ${{ github.sha }}.
+
+            **Version:** 1.0.${{ github.run_number }}
+          files: |
+            ${{ steps.apks.outputs.wear }}
+            ${{ steps.apks.outputs.companion }}
+          make_latest: true
+
+      - name: Sync master branch
+        run: |
+          git push origin HEAD:refs/heads/master
