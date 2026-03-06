@@ -100,9 +100,9 @@ public static class LocalBroadcastManager
         /// Invoked by Android when a broadcast matching our IntentFilter arrives.
         /// Simply delegates to the stored handler.
         /// </summary>
-        public override void OnReceive(Context context, Intent intent)
+        public override void OnReceive(Context? context, Intent? intent)
         {
-            _h(intent);
+            if (intent != null) _h(intent);
         }
     }
 }

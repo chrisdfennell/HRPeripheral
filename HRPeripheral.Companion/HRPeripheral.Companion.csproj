@@ -12,6 +12,7 @@
     <AndroidStoreUncompressedFileExtensions>.so</AndroidStoreUncompressedFileExtensions>
     <EmbedAssembliesIntoApk>true</EmbedAssembliesIntoApk>
     <AndroidUseLatestPlatformSdk>true</AndroidUseLatestPlatformSdk>
+    <NoWarn>$(NoWarn);CA1422;CA1416</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>

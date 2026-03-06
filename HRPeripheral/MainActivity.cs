@@ -38,7 +38,7 @@ public class MainActivity : Activity
     private long _holdStart;
     private bool _holding;
     private long _holdMillis = 10_000L; // overwritten by prefs
-    private readonly Handler _handler = new Handler(Looper.MainLooper);
+    private readonly Handler _handler = new Handler(Looper.MainLooper!);
     private Java.Lang.IRunnable? _triggerExit;
     private Java.Lang.IRunnable? _progressTick;
     private Java.Lang.IRunnable? _startCountdown; // starts after pre-hold delay
@@ -175,9 +175,9 @@ public class MainActivity : Activity
     }
 
     // Optional overflow menu path to Settings
-    public override bool OnCreateOptionsMenu(IMenu menu)
+    public override bool OnCreateOptionsMenu(IMenu? menu)
     {
-        menu.Add(0, 1001, 0, "Settings");
+        menu?.Add(0, 1001, 0, "Settings");
         return true;
     }
     public override bool OnOptionsItemSelected(IMenuItem item)
@@ -237,9 +237,7 @@ public class MainActivity : Activity
                 if (Build.VERSION.SdkInt >= BuildVersionCodes.O)
                     vib.Vibrate(VibrationEffect.CreateOneShot(longBuzz ? 180 : 30, VibrationEffect.DefaultAmplitude));
                 else
-#pragma warning disable CA1416
                     vib.Vibrate(longBuzz ? 180 : 30);
-#pragma warning restore CA1416
             }
             else
             {
@@ -247,12 +245,10 @@ public class MainActivity : Activity
                 if (Build.VERSION.SdkInt >= BuildVersionCodes.O)
                     vib.Vibrate(VibrationEffect.CreateOneShot(longBuzz ? 180 : 30, VibrationEffect.DefaultAmplitude));
                 else
-#pragma warning disable CA1416
                     vib.Vibrate(longBuzz ? 180 : 30);
-#pragma warning restore CA1416
             }
         }
-        catch { /* best-effort only */ }
+        catch (SysException ex) { SysDebug.WriteLine($"Haptic error: {ex.Message}"); }
     }
 
     private void ForceCloseApp()

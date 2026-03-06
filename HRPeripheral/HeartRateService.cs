@@ -45,8 +45,8 @@ public class HeartRateService : Service, ISensorEventListener
     private Sensor? _accel;   // accelerometer for motion-based fallback
 
     // --- Logging verbosity flags ---
-    private const bool LOG_VERBOSE_SENSORS = false; // set true only when you want raw sensor spam
-    private const bool LOG_ACCEL = false;           // set true only when debugging accel logicf
+    private static readonly bool LOG_VERBOSE_SENSORS = false; // set true only when you want raw sensor spam
+    private static readonly bool LOG_ACCEL = false;           // set true only when debugging accel logic
 
     // --- BLE peripheral wrapper and state ---
     private BlePeripheral? _ble;
@@ -65,7 +65,7 @@ public class HeartRateService : Service, ISensorEventListener
     private bool _paused;
 
     // --- Accelerometer motion detection (fallback) ---
-    private const int FallbackStillWindowMs = 15_000; // still for 15s -> pause
+    private int _fallbackStillWindowMs = HrpPrefs.DEFAULT_STILL_WINDOW_S * 1000;
     private const float MotionEps = 0.8f;             // |mag - g| > eps => motion
     private long _lastMotionMs;
 
@@ -74,7 +74,7 @@ public class HeartRateService : Service, ISensorEventListener
     private Java.Lang.IRunnable? _wdTick;
     private long _pausedSinceMs;
     private const int WATCHDOG_PERIOD_MS = 5000;
-    private const int WATCHDOG_RESUME_AFTER_MS = 15000; // paused 15s? try resume
+    private int _watchdogResumeAfterMs = HrpPrefs.DEFAULT_WATCHDOG_RESUME_S * 1000;
 
     // --- Battery level periodic update ---
     private Java.Lang.IRunnable? _batteryTick;
@@ -121,6 +121,10 @@ public class HeartRateService : Service, ISensorEventListener
         _cal = new CalorieEstimator(calMale, calWeight, calAge);
         LogD($"CalorieEstimator: male={calMale} weight={calWeight}kg age={calAge}");
 
+        _fallbackStillWindowMs = HrpPrefs.ClampStillWindow(sp.GetInt(HrpPrefs.KEY_STILL_WINDOW_S, HrpPrefs.DEFAULT_STILL_WINDOW_S)) * 1000;
+        _watchdogResumeAfterMs = HrpPrefs.ClampWatchdogResume(sp.GetInt(HrpPrefs.KEY_WATCHDOG_RESUME_S, HrpPrefs.DEFAULT_WATCHDOG_RESUME_S)) * 1000;
+        LogD($"Timings: stillWindow={_fallbackStillWindowMs}ms watchdogResume={_watchdogResumeAfterMs}ms");
+
         _sm = (SensorManager)GetSystemService(SensorService);
         if (_sm == null) { LogE("SensorManager is null!"); }
 
@@ -131,7 +135,7 @@ public class HeartRateService : Service, ISensorEventListener
         if (_autoPause)
         {
             // TYPE_LOW_LATENCY_OFFBODY_DETECT might not exist on all devices (value 34).
-            try { _offBody = _sm?.GetDefaultSensor((SensorType)34); } catch { _offBody = null; }
+            try { _offBody = _sm?.GetDefaultSensor((SensorType)34); } catch (SysException ex) { _offBody = null; LogW($"Off-body sensor not available: {ex.Message}"); }
             _accel = _sm?.GetDefaultSensor(SensorType.Accelerometer);
             LogD($"Off-body sensor present: {_offBody != null} (type=34), accel present: {_accel != null}");
         }
@@ -183,7 +187,7 @@ public class HeartRateService : Service, ISensorEventListener
             var errorIntent = new Intent(ACTION_UPDATE);
             errorIntent.PutExtra("error", msg);
             errorIntent.SetPackage(PackageName);
-            try { SendBroadcast(errorIntent); } catch { }
+            try { SendBroadcast(errorIntent); } catch (SysException ex) { LogE("Error broadcast send failed", ex); }
         };
         _ble.OnStatusChanged += (msg) =>
         {
@@ -239,12 +243,12 @@ public class HeartRateService : Service, ISensorEventListener
         }
 
         // --- Start watchdog loop to auto-resume after prolonged pause ---
-        _wdHandler = new Handler(Looper.MainLooper);
+        _wdHandler = new Handler(Looper.MainLooper!);
         _wdTick = new Java.Lang.Runnable(() =>
         {
             try
             {
-                if (_paused && (Java.Lang.JavaSystem.CurrentTimeMillis() - _pausedSinceMs) >= WATCHDOG_RESUME_AFTER_MS)
+                if (_paused && (Java.Lang.JavaSystem.CurrentTimeMillis() - _pausedSinceMs) >= _watchdogResumeAfterMs)
                 {
                     LogW("Watchdog: paused too long — forcing resume attempt");
                     PauseHr(false, "watchdog");
@@ -282,8 +286,8 @@ public class HeartRateService : Service, ISensorEventListener
         LogI("OnDestroy()");
 
         // Stop watchdog and battery timer
-        try { _wdHandler?.RemoveCallbacks(_batteryTick); } catch { }
-        try { _wdHandler?.RemoveCallbacks(_wdTick); } catch { }
+        try { _wdHandler?.RemoveCallbacks(_batteryTick); } catch (SysException ex) { LogW($"RemoveCallbacks(battery) error: {ex.Message}"); }
+        try { _wdHandler?.RemoveCallbacks(_wdTick); } catch (SysException ex) { LogW($"RemoveCallbacks(watchdog) error: {ex.Message}"); }
         _batteryTick = null; _wdTick = null; _wdHandler = null;
 
         // Receivers
@@ -347,7 +351,7 @@ public class HeartRateService : Service, ISensorEventListener
                 string valStr = values == null ? "null" : $"[{string.Join(", ", values)}]";
                 LogD($"OnSensorChanged: type={sType} ({e.Sensor.Type}) name={name} vendor={vendor} values={valStr}");
             }
-            catch { /* ignore */ }
+            catch (SysException ex) { LogW($"Verbose sensor dump error: {ex.Message}"); }
         }
 
         if (_autoPause)
@@ -388,7 +392,7 @@ public class HeartRateService : Service, ISensorEventListener
                 else
                 {
                     long idle = now - _lastMotionMs;
-                    if (idle >= FallbackStillWindowMs && !_paused)
+                    if (idle >= _fallbackStillWindowMs && !_paused)
                         PauseHr(true, "still");
                 }
                 return;

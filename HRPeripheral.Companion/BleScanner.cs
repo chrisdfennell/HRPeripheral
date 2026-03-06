@@ -12,11 +12,11 @@ namespace HRPeripheral.Companion;
 /// </summary>
 public class BleScanner
 {
-    private static readonly UUID UUID_HR_SERVICE = UUID.FromString("0000180D-0000-1000-8000-00805f9b34fb");
+    private static readonly UUID UUID_HR_SERVICE = UUID.FromString("0000180D-0000-1000-8000-00805f9b34fb")!;
 
     private BluetoothLeScanner? _scanner;
     private ScanCallbackImpl? _scanCallback;
-    private readonly Handler _handler = new(Looper.MainLooper);
+    private readonly Handler _handler = new(Looper.MainLooper!);
     private const int SCAN_TIMEOUT_MS = 15_000;
 
     public event Action<BluetoothDevice>? OnDeviceFound;
@@ -55,7 +55,7 @@ public class BleScanner
             if (_scanCallback != null)
                 _scanner?.StopScan(_scanCallback);
         }
-        catch { /* ignore */ }
+        catch (Exception ex) { Debug.WriteLine($"StopScan error: {ex.Message}"); }
 
         _handler.RemoveCallbacksAndMessages(null);
         OnScanStopped?.Invoke();

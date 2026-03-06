@@ -29,14 +29,14 @@ public class BlePeripheral : BluetoothGattServerCallback
     // =========================
     // Standard SIG UUIDs
     // =========================
-    private static readonly UUID UUID_HEART_RATE_SERVICE = UUID.FromString("0000180D-0000-1000-8000-00805f9b34fb"); // 0x180D
-    private static readonly UUID UUID_HEART_RATE_MEASUREMENT = UUID.FromString("00002A37-0000-1000-8000-00805f9b34fb"); // 0x2A37
-    private static readonly UUID UUID_BODY_SENSOR_LOCATION = UUID.FromString("00002A38-0000-1000-8000-00805f9b34fb"); // 0x2A38
-    private static readonly UUID UUID_CLIENT_CHARACTERISTIC_CONFIGURATION = UUID.FromString("00002902-0000-1000-8000-00805f9b34fb"); // CCCD
+    private static readonly UUID UUID_HEART_RATE_SERVICE = UUID.FromString("0000180D-0000-1000-8000-00805f9b34fb")!; // 0x180D
+    private static readonly UUID UUID_HEART_RATE_MEASUREMENT = UUID.FromString("00002A37-0000-1000-8000-00805f9b34fb")!; // 0x2A37
+    private static readonly UUID UUID_BODY_SENSOR_LOCATION = UUID.FromString("00002A38-0000-1000-8000-00805f9b34fb")!; // 0x2A38
+    private static readonly UUID UUID_CLIENT_CHARACTERISTIC_CONFIGURATION = UUID.FromString("00002902-0000-1000-8000-00805f9b34fb")!; // CCCD
 
     // Battery Service UUIDs (SIG-standard)
-    private static readonly UUID UUID_BATTERY_SERVICE = UUID.FromString("0000180F-0000-1000-8000-00805f9b34fb"); // 0x180F
-    private static readonly UUID UUID_BATTERY_LEVEL = UUID.FromString("00002A19-0000-1000-8000-00805f9b34fb");   // 0x2A19
+    private static readonly UUID UUID_BATTERY_SERVICE = UUID.FromString("0000180F-0000-1000-8000-00805f9b34fb")!; // 0x180F
+    private static readonly UUID UUID_BATTERY_LEVEL = UUID.FromString("00002A19-0000-1000-8000-00805f9b34fb")!;   // 0x2A19
 
     // =========================
     // Android BLE plumbing
@@ -239,8 +239,8 @@ public class BlePeripheral : BluetoothGattServerCallback
     /// </summary>
     public void StopAdvertising()
     {
-        try { _bluetoothLeAdvertiser?.StopAdvertising(_advertisingCallback); } catch { /* ignore */ }
-        try { _gattServer?.Close(); } catch { /* ignore */ }
+        try { _bluetoothLeAdvertiser?.StopAdvertising(_advertisingCallback); } catch (Exception ex) { Debug.WriteLine($"StopAdvertising error: {ex.Message}"); }
+        try { _gattServer?.Close(); } catch (Exception ex) { Debug.WriteLine($"GATT server close error: {ex.Message}"); }
 
         lock (_lock)
         {
@@ -256,6 +256,13 @@ public class BlePeripheral : BluetoothGattServerCallback
     /// </summary>
     public void UpdateHeartRate(int bpm)
     {
+        // BLE HR Measurement uses UInt8 format: valid range 0-255
+        if (bpm < 0 || bpm > 255)
+        {
+            Debug.WriteLine($"UpdateHeartRate: bpm {bpm} out of range [0,255], clamping.");
+            bpm = Math.Max(0, Math.Min(255, bpm));
+        }
+
         // Snapshot all subscribers under lock to avoid TOCTOU race
         List<BluetoothDevice> subscribers;
         lock (_lock)
@@ -313,10 +320,10 @@ public class BlePeripheral : BluetoothGattServerCallback
                 foreach (var addr in addresses)
                 {
                     BluetoothDevice? dev = null;
-                    try { dev = adapter.GetRemoteDevice(addr); } catch { /* ignore invalid addr */ }
+                    try { dev = adapter.GetRemoteDevice(addr); } catch (Exception ex) { Debug.WriteLine($"GetRemoteDevice({addr}) error: {ex.Message}"); }
 
                     // Cancel any server-side connection
-                    try { if (dev != null) _gattServer?.CancelConnection(dev); } catch { /* ignore */ }
+                    try { if (dev != null) _gattServer?.CancelConnection(dev); } catch (Exception ex) { Debug.WriteLine($"CancelConnection({addr}) error: {ex.Message}"); }
 
                     // Optional: unbond (hidden API; best-effort)
                     if (alsoUnbond && dev != null && dev.BondState == Bond.Bonded)
@@ -354,7 +361,7 @@ public class BlePeripheral : BluetoothGattServerCallback
 
             if (adapter != null)
             {
-                try { dev = adapter.GetRemoteDevice(address); } catch { /* ignore */ }
+                try { dev = adapter.GetRemoteDevice(address); } catch (Exception ex) { Debug.WriteLine($"GetRemoteDevice({address}) error: {ex.Message}"); }
             }
 
             lock (_lock)
@@ -364,7 +371,7 @@ public class BlePeripheral : BluetoothGattServerCallback
                 _knownDevices.Remove(address);
             }
 
-            try { if (dev != null) _gattServer?.CancelConnection(dev); } catch { /* ignore */ }
+            try { if (dev != null) _gattServer?.CancelConnection(dev); } catch (Exception ex) { Debug.WriteLine($"CancelConnection({address}) error: {ex.Message}"); }
 
             if (alsoUnbond && dev != null && dev.BondState == Bond.Bonded)
                 TryRemoveBond(dev);

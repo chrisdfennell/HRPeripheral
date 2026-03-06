@@ -50,7 +50,7 @@ public class CompanionMainActivity : Activity
     private ConnectionReceiver? _connReceiver;
 
     // Duration timer
-    private readonly Handler _timerHandler = new(Looper.MainLooper);
+    private readonly Handler _timerHandler = new(Looper.MainLooper!);
     private Java.Lang.IRunnable? _timerTick;
 
     protected override void OnCreate(Bundle? savedInstanceState)
@@ -142,8 +142,8 @@ public class CompanionMainActivity : Activity
     protected override void OnPause()
     {
         _timerHandler.RemoveCallbacksAndMessages(null);
-        try { if (_hrReceiver != null) UnregisterReceiver(_hrReceiver); } catch { }
-        try { if (_connReceiver != null) UnregisterReceiver(_connReceiver); } catch { }
+        try { if (_hrReceiver != null) UnregisterReceiver(_hrReceiver); } catch (Exception ex) { Debug.WriteLine($"Unregister HR receiver error: {ex.Message}"); }
+        try { if (_connReceiver != null) UnregisterReceiver(_connReceiver); } catch (Exception ex) { Debug.WriteLine($"Unregister connection receiver error: {ex.Message}"); }
         base.OnPause();
     }
 

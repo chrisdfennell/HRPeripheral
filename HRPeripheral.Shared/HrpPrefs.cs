@@ -63,6 +63,37 @@ public static class HrpPrefs
     public const int MIN_CAL_AGE = 15;
     public const int MAX_CAL_AGE = 80;
 
+    // ================================================================
+    // AUTO-PAUSE TIMING
+    // ================================================================
+    /// <summary>Seconds of no motion before auto-pause triggers.</summary>
+    public const string KEY_STILL_WINDOW_S = "still_window_s";
+    public const int DEFAULT_STILL_WINDOW_S = 15;
+    public const int MIN_STILL_WINDOW_S = 5;
+    public const int MAX_STILL_WINDOW_S = 60;
+
+    /// <summary>Seconds of pause before watchdog forces a resume.</summary>
+    public const string KEY_WATCHDOG_RESUME_S = "watchdog_resume_s";
+    public const int DEFAULT_WATCHDOG_RESUME_S = 15;
+    public const int MIN_WATCHDOG_RESUME_S = 5;
+    public const int MAX_WATCHDOG_RESUME_S = 60;
+
+    /// <summary>Clamp still-window seconds to valid range.</summary>
+    public static int ClampStillWindow(int s)
+    {
+        if (s < MIN_STILL_WINDOW_S) return MIN_STILL_WINDOW_S;
+        if (s > MAX_STILL_WINDOW_S) return MAX_STILL_WINDOW_S;
+        return s;
+    }
+
+    /// <summary>Clamp watchdog-resume seconds to valid range.</summary>
+    public static int ClampWatchdogResume(int s)
+    {
+        if (s < MIN_WATCHDOG_RESUME_S) return MIN_WATCHDOG_RESUME_S;
+        if (s > MAX_WATCHDOG_RESUME_S) return MAX_WATCHDOG_RESUME_S;
+        return s;
+    }
+
     /// <summary>Clamp weight to valid range [40, 150] kg.</summary>
     public static int ClampWeight(int kg)
     {

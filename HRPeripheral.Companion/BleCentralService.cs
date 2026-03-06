@@ -13,10 +13,7 @@ namespace HRPeripheral.Companion;
 /// subscribes to HR Measurement and Battery Level notifications, and broadcasts
 /// updates to the UI via Intents.
 /// </summary>
-[Service(
-    Exported = false,
-    ForegroundServiceType = ForegroundService.TypeConnectedDevice
-)]
+[Service(Exported = false, ForegroundServiceType = ForegroundService.TypeConnectedDevice)]
 public class BleCentralService : Service
 {
     public const string CHANNEL_ID = "hr_companion_channel";
@@ -25,11 +22,11 @@ public class BleCentralService : Service
     public const string EXTRA_DEVICE_ADDRESS = "device_address";
 
     // Standard BLE UUIDs
-    private static readonly UUID UUID_HR_SERVICE = UUID.FromString("0000180D-0000-1000-8000-00805f9b34fb");
-    private static readonly UUID UUID_HR_MEASUREMENT = UUID.FromString("00002A37-0000-1000-8000-00805f9b34fb");
-    private static readonly UUID UUID_BATTERY_SERVICE = UUID.FromString("0000180F-0000-1000-8000-00805f9b34fb");
-    private static readonly UUID UUID_BATTERY_LEVEL = UUID.FromString("00002A19-0000-1000-8000-00805f9b34fb");
-    private static readonly UUID UUID_CCCD = UUID.FromString("00002902-0000-1000-8000-00805f9b34fb");
+    private static readonly UUID UUID_HR_SERVICE = UUID.FromString("0000180D-0000-1000-8000-00805f9b34fb")!;
+    private static readonly UUID UUID_HR_MEASUREMENT = UUID.FromString("00002A37-0000-1000-8000-00805f9b34fb")!;
+    private static readonly UUID UUID_BATTERY_SERVICE = UUID.FromString("0000180F-0000-1000-8000-00805f9b34fb")!;
+    private static readonly UUID UUID_BATTERY_LEVEL = UUID.FromString("00002A19-0000-1000-8000-00805f9b34fb")!;
+    private static readonly UUID UUID_CCCD = UUID.FromString("00002902-0000-1000-8000-00805f9b34fb")!;
 
     private BluetoothManager? _btManager;
     private BluetoothGatt? _gatt;
@@ -45,7 +42,7 @@ public class BleCentralService : Service
     {
         base.OnCreate();
         _btManager = (BluetoothManager)GetSystemService(BluetoothService)!;
-        _handler = new Handler(Looper.MainLooper);
+        _handler = new Handler(Looper.MainLooper!);
         CreateChannel();
         UpdateNotification("Waiting to connect...");
     }
@@ -66,10 +63,10 @@ public class BleCentralService : Service
     public override void OnDestroy()
     {
         _handler?.RemoveCallbacksAndMessages(null);
-        try { _gatt?.Close(); } catch { }
+        try { _gatt?.Close(); } catch (Exception ex) { Debug.WriteLine($"GATT close error: {ex.Message}"); }
         _gatt = null;
         _connected = false;
-        try { StopForeground(true); } catch { }
+        try { StopForeground(true); } catch (Exception ex) { Debug.WriteLine($"StopForeground error: {ex.Message}"); }
         base.OnDestroy();
     }
 
@@ -130,7 +127,7 @@ public class BleCentralService : Service
             if (!_connected)
             {
                 Debug.WriteLine($"Reconnecting to {addr} (attempt={_backoff.Attempt}, delay={delayMs}ms)...");
-                try { _gatt?.Close(); } catch { }
+                try { _gatt?.Close(); } catch (Exception ex) { Debug.WriteLine($"GATT close on reconnect error: {ex.Message}"); }
                 ConnectToDevice(addr);
             }
         }, delayMs);
@@ -142,16 +139,26 @@ public class BleCentralService : Service
 
         // Subscribe to HR Measurement
         var hrService = _gatt.GetService(UUID_HR_SERVICE);
-        var hrMeas = hrService?.GetCharacteristic(UUID_HR_MEASUREMENT);
+        if (hrService == null)
+        {
+            Debug.WriteLine("HR Service (0x180D) not found on peripheral.");
+            return;
+        }
+
+        var hrMeas = hrService.GetCharacteristic(UUID_HR_MEASUREMENT);
         if (hrMeas != null)
         {
             _gatt.SetCharacteristicNotification(hrMeas, true);
             var cccd = hrMeas.GetDescriptor(UUID_CCCD);
             if (cccd != null)
             {
-                cccd.SetValue(BluetoothGattDescriptor.EnableNotificationValue.ToArray());
-                _gatt.WriteDescriptor(cccd);
-                Debug.WriteLine("Subscribed to HR Measurement notifications.");
+                var enableValue = BluetoothGattDescriptor.EnableNotificationValue;
+                if (enableValue != null)
+                {
+                    cccd.SetValue(enableValue.ToArray());
+                    _gatt.WriteDescriptor(cccd);
+                    Debug.WriteLine("Subscribed to HR Measurement notifications.");
+                }
             }
         }
 
@@ -168,9 +175,13 @@ public class BleCentralService : Service
                 var cccd = battLevel.GetDescriptor(UUID_CCCD);
                 if (cccd != null)
                 {
-                    cccd.SetValue(BluetoothGattDescriptor.EnableNotificationValue.ToArray());
-                    _gatt.WriteDescriptor(cccd);
-                    Debug.WriteLine("Subscribed to Battery Level notifications.");
+                    var enableValue = BluetoothGattDescriptor.EnableNotificationValue;
+                    if (enableValue != null)
+                    {
+                        cccd.SetValue(enableValue.ToArray());
+                        _gatt.WriteDescriptor(cccd);
+                        Debug.WriteLine("Subscribed to Battery Level notifications.");
+                    }
                 }
 
                 // Also read the battery level immediately
@@ -184,7 +195,7 @@ public class BleCentralService : Service
         var intent = new Intent(ACTION_HR_UPDATE);
         intent.PutExtra("hr", bpm);
         intent.SetPackage(PackageName);
-        try { SendBroadcast(intent); } catch { }
+        try { SendBroadcast(intent); } catch (Exception ex) { Debug.WriteLine($"HR broadcast error: {ex.Message}"); }
 
         UpdateNotification($"HR: {bpm} bpm");
     }
@@ -194,7 +205,7 @@ public class BleCentralService : Service
         var intent = new Intent(ACTION_HR_UPDATE);
         intent.PutExtra("battery", level);
         intent.SetPackage(PackageName);
-        try { SendBroadcast(intent); } catch { }
+        try { SendBroadcast(intent); } catch (Exception ex) { Debug.WriteLine($"Battery broadcast error: {ex.Message}"); }
     }
 
     private void BroadcastConnectionState(bool connected)
@@ -202,7 +213,7 @@ public class BleCentralService : Service
         var intent = new Intent(ACTION_CONNECTION);
         intent.PutExtra("connected", connected);
         intent.SetPackage(PackageName);
-        try { SendBroadcast(intent); } catch { }
+        try { SendBroadcast(intent); } catch (Exception ex) { Debug.WriteLine($"Connection broadcast error: {ex.Message}"); }
     }
 
     private void CreateChannel()

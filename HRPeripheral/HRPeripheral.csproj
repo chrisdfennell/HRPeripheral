@@ -11,6 +11,9 @@
     <EmbedAssembliesIntoApk>true</EmbedAssembliesIntoApk>
     <TrimMode>partial</TrimMode>
     <AndroidUseLatestPlatformSdk>true</AndroidUseLatestPlatformSdk>
+    <!-- Suppress platform compat warnings — this is an Android-only app using APIs that
+         are deprecated but still required for older API levels (SupportedOSPlatformVersion=23) -->
+    <NoWarn>$(NoWarn);CA1422;CA1416;XA4218</NoWarn>
   </PropertyGroup>
 
   <!--
@@ -21,6 +24,13 @@
     <AndroidPackageFormat>aab</AndroidPackageFormat>
     <AndroidUseSharedRuntime>false</AndroidUseSharedRuntime>
     <RunAOTCompilation>false</RunAOTCompilation>
+    <!--
+      To sign release builds for Google Play:
+        1. Generate a keystore:  keytool -genkey -v -keystore hrperipheral.keystore -alias hrperipheral -keyalg RSA -keysize 2048 -validity 10000
+        2. Set AndroidKeyStore to true
+        3. Fill in the alias/passwords below (or pass via environment variables / CI secrets)
+        4. Set AndroidSigningKeyStore to the keystore file path
+    -->
     <AndroidKeyStore>false</AndroidKeyStore>
     <AndroidSigningKeyAlias></AndroidSigningKeyAlias>
     <AndroidSigningKeyPass></AndroidSigningKeyPass>

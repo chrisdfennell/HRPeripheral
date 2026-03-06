@@ -21,6 +21,20 @@ obj/
 *.VisualState.xml
 TestResult.xml
 
+## IDE
+.vscode/
+.idea/
+
+## Android build artifacts
+*.apk
+*.aab
+
+## Publish output
+publish/
+
+## Logs
+*.log
+
 ## OS
 Thumbs.db
 .DS_Store

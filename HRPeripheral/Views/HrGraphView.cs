@@ -117,6 +117,7 @@ public class HrGraphView : View
     readonly APath _path = new();
     readonly APath _pathFill = new();
     readonly Rect _textBounds = new();
+    readonly Paint _bgPaint = new() { AntiAlias = true };
     LinearGradient? _bgGradient;
 
     // ===== Constructors required for XML inflation =====
@@ -163,9 +164,9 @@ public class HrGraphView : View
             // improve rendering
             SetLayerType(LayerType.Hardware, null);
         }
-        catch
+        catch (Exception ex)
         {
-            // keep inflater resilient
+            System.Diagnostics.Debug.WriteLine($"HrGraphView.Init error: {ex.Message}");
         }
     }
 
@@ -253,9 +254,8 @@ public class HrGraphView : View
         // background
         if (_bgGradient != null)
         {
-            using var bg = new Paint() { AntiAlias = true };
-            bg.SetShader(_bgGradient);
-            canvas.DrawRect(0, 0, w, h, bg);
+            _bgPaint.SetShader(_bgGradient);
+            canvas.DrawRect(0, 0, w, h, _bgPaint);
         }
         else
         {
