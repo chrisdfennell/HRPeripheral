@@ -469,7 +469,7 @@ public class BlePeripheral : BluetoothGattServerCallback
         bool notificationsEnabled =
             value != null &&
             value.Length > 0 &&
-            value[0] == BluetoothGattDescriptor.EnableNotificationValue[0];
+            value[0] == BluetoothGattDescriptor.EnableNotificationValue![0];
 
         // Determine which characteristic this CCCD belongs to
         var parentUuid = descriptor!.Characteristic?.Uuid;

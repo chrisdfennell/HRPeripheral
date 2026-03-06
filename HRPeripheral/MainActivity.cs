@@ -137,7 +137,7 @@ public class MainActivity : Activity
             _exitOverlay.Touch += (s, e) =>
             {
                 // If touch begins on the gear, let the gear handle it
-                if (e.Event.ActionMasked == MotionEventActions.Down && _btnSettings != null)
+                if (e.Event!.ActionMasked == MotionEventActions.Down && _btnSettings != null)
                 {
                     if (IsTouchInsideView(_btnSettings, e.Event))
                     {
